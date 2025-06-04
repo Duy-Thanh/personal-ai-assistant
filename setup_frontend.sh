@@ -11,21 +11,6 @@ echo "========================================"
 # Navigate to project directory
 cd /home/$USER/personal-ai-assistant
 
-# # Copy the frontend files (assuming they're uploaded)
-# if [ -f "../index.html" ]; then
-#     cp ../index.html .
-#     echo "✅ Chat interface HTML file copied"
-# else
-#     echo "❌ index.html not found. Please upload it first."
-# fi
-
-# if [ -f "../landing.html" ]; then
-#     cp ../landing.html .
-#     echo "✅ Landing page HTML file copied"
-# else
-#     echo "❌ landing.html not found. Please upload it first."
-# fi
-
 # Check if at least one frontend file exists
 if [ ! -f "index.html" ] && [ ! -f "landing.html" ]; then
     echo "⚠️  No frontend files found. The API will use fallback interfaces."

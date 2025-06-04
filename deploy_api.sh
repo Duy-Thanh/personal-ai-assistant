@@ -14,15 +14,6 @@ cd /home/$USER/personal-ai-assistant
 # Activate virtual environment
 source venv/bin/activate
 
-# # Copy the API file (assuming it's uploaded)
-# if [ -f "../fast_chatbot_api.py" ]; then
-#     cp ../fast_chatbot_api.py .
-#     echo "✅ API file copied"
-# else
-#     echo "❌ fast_chatbot_api.py not found. Please upload it first."
-#     exit 1
-# fi
-
 # Create requirements.txt
 cat > requirements.txt << EOF
 flask==2.3.3

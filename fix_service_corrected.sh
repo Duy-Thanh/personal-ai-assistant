@@ -93,15 +93,22 @@ sudo systemctl stop personal-ai-assistant 2>/dev/null || true
 
 # Step 7: Create wrapper script for reliable systemd execution
 echo "📝 Creating service wrapper script..."
-cat > "$PROJECT_DIR/start_service.sh" << EOF
+cat > "$PROJECT_DIR/start_service.sh" << 'EOF'
 #!/bin/bash
-cd $PROJECT_DIR
+set -e
+cd /home/btldtdm1005/personal-ai-assistant
 source venv/bin/activate
 exec gunicorn --workers 2 --bind 127.0.0.1:5000 --timeout 120 --keep-alive 2 --max-requests 1000 --max-requests-jitter 50 fast_chatbot_api:app
 EOF
 
 chmod +x "$PROJECT_DIR/start_service.sh"
 echo "✅ Wrapper script created at: $PROJECT_DIR/start_service.sh"
+
+# Verify the wrapper script content and permissions
+echo "🔍 Verifying wrapper script..."
+ls -la "$PROJECT_DIR/start_service.sh"
+echo "📄 Wrapper script content:"
+cat "$PROJECT_DIR/start_service.sh"
 
 # Step 8: Test the wrapper script
 echo "🧪 Testing wrapper script..."
@@ -119,7 +126,7 @@ fi
 
 # Step 9: Create new service file using wrapper script approach
 echo "📝 Creating corrected systemd service..."
-sudo tee /etc/systemd/system/personal-ai-assistant.service > /dev/null << EOF
+sudo tee /etc/systemd/system/personal-ai-assistant.service > /dev/null << 'EOF'
 [Unit]
 Description=Personal AI Assistant API
 After=network.target ollama.service
@@ -127,29 +134,25 @@ Requires=ollama.service
 
 [Service]
 Type=simple
-User=$USER
-Group=$USER
-WorkingDirectory=$PROJECT_DIR
-ExecStart=$PROJECT_DIR/start_service.sh
+User=btldtdm1005
+Group=btldtdm1005
+WorkingDirectory=/home/btldtdm1005/personal-ai-assistant
+ExecStart=/bin/bash /home/btldtdm1005/personal-ai-assistant/start_service.sh
 Restart=always
 RestartSec=3
 StandardOutput=journal
 StandardError=journal
 
-# Security settings
+# Security settings (relaxed for troubleshooting)
 NoNewPrivileges=yes
-PrivateTmp=yes
-ProtectSystem=strict
-ProtectHome=yes
-ReadWritePaths=$PROJECT_DIR
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
 echo "✅ Service file created with wrapper script approach:"
-echo "   WorkingDirectory: $PROJECT_DIR"
-echo "   ExecStart: $PROJECT_DIR/start_service.sh"
+echo "   WorkingDirectory: /home/btldtdm1005/personal-ai-assistant"
+echo "   ExecStart: /bin/bash /home/btldtdm1005/personal-ai-assistant/start_service.sh"
 
 # Step 10: Reload and start service
 echo "🔄 Reloading systemd configuration..."
