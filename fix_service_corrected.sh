@@ -91,7 +91,33 @@ fi
 echo "🛑 Stopping existing service..."
 sudo systemctl stop personal-ai-assistant 2>/dev/null || true
 
-# Step 7: Create new service file with absolutely correct paths
+# Step 7: Create wrapper script for reliable systemd execution
+echo "📝 Creating service wrapper script..."
+cat > "$PROJECT_DIR/start_service.sh" << EOF
+#!/bin/bash
+cd $PROJECT_DIR
+source venv/bin/activate
+exec gunicorn --workers 2 --bind 127.0.0.1:5000 --timeout 120 --keep-alive 2 --max-requests 1000 --max-requests-jitter 50 fast_chatbot_api:app
+EOF
+
+chmod +x "$PROJECT_DIR/start_service.sh"
+echo "✅ Wrapper script created at: $PROJECT_DIR/start_service.sh"
+
+# Step 8: Test the wrapper script
+echo "🧪 Testing wrapper script..."
+timeout 10s "$PROJECT_DIR/start_service.sh" &
+WRAPPER_PID=$!
+sleep 3
+
+if kill -0 $WRAPPER_PID 2>/dev/null; then
+    echo "✅ Wrapper script test successful"
+    kill $WRAPPER_PID 2>/dev/null || true
+else
+    echo "❌ Wrapper script test failed"
+    exit 1
+fi
+
+# Step 9: Create new service file using wrapper script approach
 echo "📝 Creating corrected systemd service..."
 sudo tee /etc/systemd/system/personal-ai-assistant.service > /dev/null << EOF
 [Unit]
@@ -102,9 +128,9 @@ Requires=ollama.service
 [Service]
 Type=simple
 User=$USER
+Group=$USER
 WorkingDirectory=$PROJECT_DIR
-Environment=PATH=$PROJECT_DIR/venv/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=$PROJECT_DIR/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:5000 --timeout 120 --keep-alive 2 --max-requests 1000 --max-requests-jitter 50 fast_chatbot_api:app
+ExecStart=$PROJECT_DIR/start_service.sh
 Restart=always
 RestartSec=3
 StandardOutput=journal
@@ -121,11 +147,11 @@ ReadWritePaths=$PROJECT_DIR
 WantedBy=multi-user.target
 EOF
 
-echo "✅ Service file created with paths:"
+echo "✅ Service file created with wrapper script approach:"
 echo "   WorkingDirectory: $PROJECT_DIR"
-echo "   ExecStart: $PROJECT_DIR/venv/bin/gunicorn"
+echo "   ExecStart: $PROJECT_DIR/start_service.sh"
 
-# Step 8: Reload and start service
+# Step 10: Reload and start service
 echo "🔄 Reloading systemd configuration..."
 sudo systemctl daemon-reload
 sudo systemctl enable personal-ai-assistant
@@ -136,7 +162,7 @@ sudo systemctl start personal-ai-assistant
 # Wait for startup
 sleep 5
 
-# Step 9: Verify service status
+# Step 11: Verify service status
 if sudo systemctl is-active --quiet personal-ai-assistant; then
     echo "✅ Service is running!"
     
