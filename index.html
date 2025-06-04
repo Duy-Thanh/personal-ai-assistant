@@ -1998,7 +1998,9 @@
                 updateSessionStats();
                 messageInput.focus();
             }
-        }        function updateSessionStats() {
+        }        
+        
+        function updateSessionStats() {
             const sessionElement = document.getElementById('sessionMessages');
             if (sessionElement) {
                 sessionElement.textContent = sessionMessageCount;
