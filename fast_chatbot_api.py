@@ -20,6 +20,7 @@ OLLAMA_BASE_URL = "http://localhost:11434"
 MODEL_NAME = "phi3:mini"  # Change to "mistral:7b" if you prefer
 MAX_CONVERSATION_LENGTH = 25  # Maximum number of exchanges to keep in memory
 MAX_CONTEXT_MESSAGES = 50  # Maximum messages to include in context
+OLLAMA_TIMEOUT = int(os.getenv('OLLAMA_TIMEOUT', '120'))  # Default 2 minutes, configurable via environment
 
 # In-memory conversation storage (replace with Redis/DB for production)
 conversations: Dict[str, List[Dict]] = {}
@@ -105,8 +106,14 @@ def build_context_prompt(session_id: str, current_message: str) -> str:
     return "\n".join(context_parts)
 
 def query_ollama(prompt: str) -> tuple[str, bool]:
-    """Query Ollama API with error handling"""
+    """Query Ollama API with enhanced timeout handling and error recovery"""
     try:
+        # Use configurable timeout for AI responses
+        # AI models can take time to think, especially for complex queries
+        timeout_duration = OLLAMA_TIMEOUT
+        
+        logger.info(f"Sending request to Ollama (timeout: {timeout_duration}s)")
+        
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/generate",
             json={
@@ -116,22 +123,40 @@ def query_ollama(prompt: str) -> tuple[str, bool]:
                 "options": {
                     "temperature": 0.7,
                     "top_p": 0.9,
-                    "max_tokens": 500
+                    "max_tokens": 500,
+                    "num_predict": 500,  # Limit response length for faster processing
+                    "stop": ["\n\nUser:", "\n\nHuman:"]  # Stop tokens to prevent runaway generation
                 }
             },
-            timeout=30
+            timeout=timeout_duration
         )
         
         if response.status_code == 200:
             result = response.json()
-            return result.get("response", "Sorry, I couldn't generate a response."), True
-        else:
-            logger.error(f"Ollama API error: {response.status_code}")
-            return "Sorry, I'm experiencing technical difficulties.", False
+            ai_response = result.get("response", "").strip()
             
+            if ai_response:
+                logger.info(f"Ollama response received successfully ({len(ai_response)} chars)")
+                return ai_response, True
+            else:
+                logger.warning("Ollama returned empty response")
+                return "I apologize, but I couldn't generate a proper response. Please try rephrasing your question.", False
+        else:
+            logger.error(f"Ollama API error: {response.status_code} - {response.text}")
+            return "Sorry, I'm experiencing technical difficulties. Please try again in a moment.", False
+            
+    except requests.exceptions.Timeout as e:
+        logger.error(f"Ollama request timed out after {timeout_duration}s: {e}")
+        return "I'm taking longer than usual to process your request. The AI model is working hard on your question - please try again or simplify your request.", False
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"Connection error to Ollama: {e}")
+        return "I'm having trouble connecting to the AI service. Please check that the AI model is running and try again.", False
     except requests.RequestException as e:
         logger.error(f"Request to Ollama failed: {e}")
         return "Sorry, I'm currently unavailable. Please try again later.", False
+    except Exception as e:
+        logger.error(f"Unexpected error in query_ollama: {e}")
+        return "An unexpected error occurred. Please try again.", False
 
 @app.route('/')
 def landing():
@@ -360,10 +385,17 @@ def get_stats():
         "total_conversations": len(conversations),
         "total_messages_in_memory": total_messages,
         "model": MODEL_NAME,
+        "ollama_timeout": OLLAMA_TIMEOUT,
         "memory_conservation": {
             "max_conversation_length": MAX_CONVERSATION_LENGTH,
             "max_context_messages": MAX_CONTEXT_MESSAGES,
             "cleanup_enabled": True
+        },
+        "api_configuration": {
+            "timeout_seconds": OLLAMA_TIMEOUT,
+            "max_response_tokens": 500,
+            "model_name": MODEL_NAME,
+            "ollama_url": OLLAMA_BASE_URL
         },
         "timestamp": datetime.now().isoformat()
     })
@@ -436,7 +468,10 @@ if __name__ == '__main__':
     print("🚀 Starting Personal AI Assistant API...")
     print(f"📊 Model: {MODEL_NAME}")
     print(f"🔗 Ollama URL: {OLLAMA_BASE_URL}")
+    print(f"⏱️  Timeout: {OLLAMA_TIMEOUT} seconds")
+    print(f"🧠 Memory: {MAX_CONVERSATION_LENGTH} conversations × {MAX_CONTEXT_MESSAGES} messages")
     print("🌐 Access the test interface at: http://localhost:5000/")
     print("📡 API endpoints available at: /chat, /health, /stats")
+    print("💡 Tip: Set OLLAMA_TIMEOUT environment variable to adjust timeout")
     
     app.run(host='0.0.0.0', port=5000, debug=True)

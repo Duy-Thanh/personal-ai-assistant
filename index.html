@@ -294,9 +294,7 @@
             background: var(--text-secondary);
             cursor: not-allowed;
             transform: none;
-        }
-
-        /* Loading States */
+        }        /* Loading States */
         .typing-indicator {
             display: flex;
             align-items: center;
@@ -306,7 +304,7 @@
             border: 1px solid var(--border);
             border-radius: 18px;
             border-bottom-left-radius: 4px;
-            max-width: 80px;
+            max-width: 300px; /* Increased width to accommodate text */
             margin-bottom: 1.5rem;
         }
 
@@ -991,21 +989,60 @@
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
                 .replace(/\n/g, '<br>');
-        }
-
-        function showTypingIndicator() {
+        }        function showTypingIndicator() {
             const typingDiv = document.createElement('div');
             typingDiv.className = 'typing-indicator';
             typingDiv.id = 'typingIndicator';
             
+            // Create dots
             for (let i = 0; i < 3; i++) {
                 const dot = document.createElement('div');
                 dot.className = 'typing-dot';
                 typingDiv.appendChild(dot);
             }
 
+            // Add helpful text
+            const textDiv = document.createElement('div');
+            textDiv.className = 'typing-text';
+            textDiv.textContent = 'AI is thinking...';
+            textDiv.style.fontSize = '0.75rem';
+            textDiv.style.color = 'var(--text-secondary)';
+            textDiv.style.marginLeft = '8px';
+            typingDiv.appendChild(textDiv);
+
             chatMessages.appendChild(typingDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Update message after longer wait to reassure user
+            setTimeout(() => {
+                const currentTyping = document.getElementById('typingIndicator');
+                if (currentTyping) {
+                    const textElement = currentTyping.querySelector('.typing-text');
+                    if (textElement) {
+                        textElement.textContent = 'Processing your request...';
+                    }
+                }
+            }, 15000); // After 15 seconds
+            
+            setTimeout(() => {
+                const currentTyping = document.getElementById('typingIndicator');
+                if (currentTyping) {
+                    const textElement = currentTyping.querySelector('.typing-text');
+                    if (textElement) {
+                        textElement.textContent = 'AI model is working hard on your response...';
+                    }
+                }
+            }, 45000); // After 45 seconds
+            
+            setTimeout(() => {
+                const currentTyping = document.getElementById('typingIndicator');
+                if (currentTyping) {
+                    const textElement = currentTyping.querySelector('.typing-text');
+                    if (textElement) {
+                        textElement.textContent = 'Almost ready, complex queries take time...';
+                    }
+                }
+            }, 90000); // After 1.5 minutes
         }
 
         function hideTypingIndicator() {
