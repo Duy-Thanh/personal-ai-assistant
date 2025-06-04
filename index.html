@@ -1140,9 +1140,7 @@
 
         .new-conversation-btn {
             animation: scaleIn 0.4s ease-out;
-        }
-
-        /* Enhanced empty state */
+        }        /* Enhanced empty state */
         .empty-conversations {
             text-align: center;
             padding: 2rem 1rem;
@@ -1158,6 +1156,20 @@
             margin-bottom: 0.5rem;
             display: block;
             opacity: 0.5;
+        }
+
+        /* Streaming response cursor */
+        .typing-cursor {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: transparent;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
         }
     </style>
 </head>
@@ -1670,9 +1682,7 @@
             if (confirm('Start a new chat session? Current conversation will be saved but a new session will begin.')) {
                 createNewConversation();
             }
-        }
-
-        async function sendMessage() {
+        }        async function sendMessage() {
             const message = messageInput.value.trim();
             if (!message || isWaitingForResponse) return;
 
@@ -1699,6 +1709,128 @@
             try {
                 const startTime = Date.now();
                 
+                // Try streaming first for better UX
+                await sendMessageWithStreaming(message, startTime);
+
+            } catch (error) {
+                console.error('Chat error:', error);
+                hideTypingIndicator();
+                addMessage('assistant', `Connection error: ${error.message}. Please check if the API server is running.`, true);
+            } finally {
+                isWaitingForResponse = false;
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        async function sendMessageWithStreaming(message, startTime) {
+            try {
+                const response = await fetch(`${API_BASE}/chat/stream`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Session-ID': sessionId
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let currentMessageDiv = null;
+                let currentContentDiv = null;
+                let buffer = '';
+
+                hideTypingIndicator();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                
+                                if (data.status === 'processing') {
+                                    // Update typing indicator
+                                    const typingText = document.querySelector('.typing-text');
+                                    if (typingText) {
+                                        typingText.textContent = data.message;
+                                    }
+                                } else if (data.status === 'streaming') {
+                                    // Create or update streaming message
+                                    if (!currentMessageDiv) {
+                                        currentMessageDiv = document.createElement('div');
+                                        currentMessageDiv.className = 'message assistant';
+                                        
+                                        currentContentDiv = document.createElement('div');
+                                        currentContentDiv.className = 'message-content';
+                                        
+                                        const metaDiv = document.createElement('div');
+                                        metaDiv.className = 'message-meta';
+                                        metaDiv.textContent = new Date().toLocaleTimeString();
+                                        
+                                        currentMessageDiv.appendChild(currentContentDiv);
+                                        currentMessageDiv.appendChild(metaDiv);
+                                        chatMessages.appendChild(currentMessageDiv);
+                                    }
+                                    
+                                    // Update content with streaming text
+                                    if (currentContentDiv) {
+                                        const formattedText = formatMessage(data.full_response || '');
+                                        currentContentDiv.innerHTML = formattedText + '<span class="typing-cursor">|</span>';
+                                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                                    }
+                                } else if (data.status === 'complete') {
+                                    // Finalize the message
+                                    if (currentContentDiv) {
+                                        const formattedText = formatMessage(data.full_response);
+                                        currentContentDiv.innerHTML = formattedText;
+                                        
+                                        // Remove typing cursor
+                                        const cursor = currentContentDiv.querySelector('.typing-cursor');
+                                        if (cursor) cursor.remove();
+                                    }
+                                    
+                                    // Update stats
+                                    const endTime = Date.now();
+                                    lastResponseTime = endTime - startTime;
+                                    sessionMessageCount++;
+                                    updateStats();
+                                    
+                                    // Save to history manually (since streaming doesn't go through addMessage)
+                                    addToChatHistory('assistant', data.full_response);
+                                    
+                                    break;
+                                } else if (data.status === 'error') {
+                                    hideTypingIndicator();
+                                    addMessage('assistant', `Error: ${data.error}`, true);
+                                    break;
+                                }
+                            } catch (e) {
+                                console.warn('Failed to parse SSE data:', line, e);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                // Fallback to regular endpoint
+                console.warn('Streaming failed, falling back to regular endpoint:', error);
+                await sendMessageFallback(message, startTime);
+            }
+        }
+
+        async function sendMessageFallback(message, startTime) {
+            try {
                 const response = await fetch(`${API_BASE}/chat`, {
                     method: 'POST',
                     headers: {
@@ -1728,15 +1860,10 @@
                 }
 
             } catch (error) {
-                console.error('Chat error:', error);
                 hideTypingIndicator();
-                addMessage('assistant', `Connection error: ${error.message}. Please check if the API server is running.`, true);
-            } finally {
-                isWaitingForResponse = false;
-                sendButton.disabled = false;
-                messageInput.focus();
+                throw error; // Re-throw to be handled by the main function
             }
-        }        function addMessage(sender, text, isError = false, saveToHistory = true) {
+        }function addMessage(sender, text, isError = false, saveToHistory = true) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${sender}`;
 
@@ -1799,36 +1926,46 @@
             chatMessages.appendChild(typingDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
             
-            // Update message after longer wait to reassure user
+            // Progressive messages for longer waits
             setTimeout(() => {
                 const currentTyping = document.getElementById('typingIndicator');
                 if (currentTyping) {
                     const textElement = currentTyping.querySelector('.typing-text');
                     if (textElement) {
-                        textElement.textContent = 'Processing your request...';
+                        textElement.textContent = 'Processing complex request...';
                     }
                 }
-            }, 15000); // After 15 seconds
+            }, 10000); // After 10 seconds
             
             setTimeout(() => {
                 const currentTyping = document.getElementById('typingIndicator');
                 if (currentTyping) {
                     const textElement = currentTyping.querySelector('.typing-text');
                     if (textElement) {
-                        textElement.textContent = 'AI model is working hard on your response...';
+                        textElement.textContent = 'AI model is working hard (up to 10 minutes for complex queries)...';
                     }
                 }
-            }, 45000); // After 45 seconds
+            }, 30000); // After 30 seconds
             
             setTimeout(() => {
                 const currentTyping = document.getElementById('typingIndicator');
                 if (currentTyping) {
                     const textElement = currentTyping.querySelector('.typing-text');
                     if (textElement) {
-                        textElement.textContent = 'Almost ready, complex queries take time...';
+                        textElement.textContent = 'Almost ready, complex analysis takes time...';
                     }
                 }
-            }, 90000); // After 1.5 minutes
+            }, 120000); // After 2 minutes
+            
+            setTimeout(() => {
+                const currentTyping = document.getElementById('typingIndicator');
+                if (currentTyping) {
+                    const textElement = currentTyping.querySelector('.typing-text');
+                    if (textElement) {
+                        textElement.textContent = 'Still processing - this is a really complex question!';
+                    }
+                }
+            }, 300000); // After 5 minutes
         }
 
         function hideTypingIndicator() {

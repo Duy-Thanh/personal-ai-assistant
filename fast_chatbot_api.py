@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, Response
 from flask_cors import CORS
 import requests
 import json
@@ -7,6 +7,8 @@ import logging
 from datetime import datetime
 import os
 from typing import Dict, List, Optional
+import threading
+import uuid
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +22,7 @@ OLLAMA_BASE_URL = "http://localhost:11434"
 MODEL_NAME = "phi3:mini"  # Change to "mistral:7b" if you prefer
 MAX_CONVERSATION_LENGTH = 25  # Maximum number of exchanges to keep in memory
 MAX_CONTEXT_MESSAGES = 50  # Maximum messages to include in context
-OLLAMA_TIMEOUT = int(os.getenv('OLLAMA_TIMEOUT', '120'))  # Default 2 minutes, configurable via environment
+OLLAMA_TIMEOUT = int(os.getenv('OLLAMA_TIMEOUT', '600'))  # Default 10 minutes for complex queries
 
 # In-memory conversation storage (replace with Redis/DB for production)
 conversations: Dict[str, List[Dict]] = {}
@@ -319,7 +321,7 @@ def chat():
         # Build context-aware prompt
         prompt = build_context_prompt(session_id, user_message)
         
-        # Query Ollama
+        # Query Ollama with extended timeout
         ai_response, success = query_ollama(prompt)
         
         if success:
@@ -344,6 +346,115 @@ def chat():
     except Exception as e:
         stats["failed_requests"] += 1
         logger.error(f"Chat endpoint error: {e}")
+        return jsonify({
+            "success": False,
+            "error": "Internal server error"
+        }), 500
+
+@app.route('/chat/stream', methods=['POST'])
+def chat_stream():
+    """Streaming chat endpoint for long responses"""
+    stats["total_requests"] += 1
+    
+    try:
+        data = request.get_json()
+        if not data or 'message' not in data:
+            stats["failed_requests"] += 1
+            return jsonify({
+                "success": False,
+                "error": "Missing 'message' in request body"
+            }), 400
+        
+        user_message = data['message'].strip()
+        if not user_message:
+            stats["failed_requests"] += 1
+            return jsonify({
+                "success": False,
+                "error": "Empty message"
+            }), 400
+        
+        session_id = get_session_id(request)
+        
+        def generate_stream():
+            try:
+                # Build context-aware prompt
+                prompt = build_context_prompt(session_id, user_message)
+                
+                # Send immediate acknowledgment
+                yield f"data: {json.dumps({'status': 'processing', 'message': 'AI is thinking...'})}\n\n"
+                
+                # Query Ollama with streaming
+                response = requests.post(
+                    f"{OLLAMA_BASE_URL}/api/generate",
+                    json={
+                        "model": MODEL_NAME,
+                        "prompt": prompt,
+                        "stream": True,  # Enable streaming
+                        "options": {
+                            "temperature": 0.7,
+                            "top_p": 0.9,
+                            "num_predict": 1000,  # Allow longer responses
+                            "stop": ["\n\nUser:", "\n\nHuman:"]
+                        }
+                    },
+                    stream=True,
+                    timeout=OLLAMA_TIMEOUT
+                )
+                
+                if response.status_code == 200:
+                    full_response = ""
+                    for line in response.iter_lines():
+                        if line:
+                            try:
+                                chunk_data = json.loads(line.decode('utf-8'))
+                                if 'response' in chunk_data:
+                                    chunk_text = chunk_data['response']
+                                    full_response += chunk_text
+                                    
+                                    # Send chunk to client
+                                    yield f"data: {json.dumps({'status': 'streaming', 'chunk': chunk_text, 'full_response': full_response})}\n\n"
+                                
+                                if chunk_data.get('done', False):
+                                    break
+                            except json.JSONDecodeError:
+                                continue
+                    
+                    # Save to conversation history
+                    if full_response.strip():
+                        add_to_conversation(session_id, user_message, full_response.strip())
+                        stats["successful_requests"] += 1
+                        
+                        # Send completion signal
+                        yield f"data: {json.dumps({'status': 'complete', 'full_response': full_response.strip(), 'session_id': session_id})}\n\n"
+                    else:
+                        stats["failed_requests"] += 1
+                        yield f"data: {json.dumps({'status': 'error', 'error': 'Empty response from AI'})}\n\n"
+                else:
+                    stats["failed_requests"] += 1
+                    yield f"data: {json.dumps({'status': 'error', 'error': f'API error: {response.status_code}'})}\n\n"
+                    
+            except requests.exceptions.Timeout:
+                stats["failed_requests"] += 1
+                yield f"data: {json.dumps({'status': 'error', 'error': 'Request timed out - AI model is taking too long'})}\n\n"
+            except Exception as e:
+                stats["failed_requests"] += 1
+                logger.error(f"Streaming error: {e}")
+                yield f"data: {json.dumps({'status': 'error', 'error': str(e)})}\n\n"
+        
+        return Response(
+            generate_stream(),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type, X-Session-ID'
+            }
+        )
+        
+    except Exception as e:
+        stats["failed_requests"] += 1
+        logger.error(f"Chat stream endpoint error: {e}")
         return jsonify({
             "success": False,
             "error": "Internal server error"
