@@ -1440,7 +1440,9 @@
                 conversationItem.style.animationDelay = `${index * 0.1}s`;
                 conversationList.appendChild(conversationItem);
             });
-        }        function createConversationItem(conversation) {
+        }        
+        
+        function createConversationItem(conversation) {
             const item = document.createElement('div');
             item.className = `conversation-item ${conversation.id === currentConversationId ? 'active' : ''}`;
             item.onclick = () => switchToConversation(conversation.id);
@@ -1508,7 +1510,9 @@
             
             saveConversations();
             switchToConversation(newConversationId);
-        }        function switchToConversation(conversationId) {
+        }        
+        
+        function switchToConversation(conversationId) {
             if (conversationId === currentConversationId) return;
             
             // Save current conversation state
@@ -1620,7 +1624,9 @@
         // Chat History Management
         function saveChatHistory() {
             localStorage.setItem('chatHistory_' + sessionId, JSON.stringify(chatHistory));
-        }        function addToChatHistory(role, content) {
+        }        
+        
+        function addToChatHistory(role, content) {
             const entry = {
                 role: role,
                 content: content,
@@ -1639,7 +1645,9 @@
             
             // Update conversation metadata
             updateCurrentConversation();
-        }        function loadChatHistory() {
+        }        
+        
+        function loadChatHistory() {
             if (chatHistory.length === 0) return;
             
             // Restore messages from history
@@ -1678,11 +1686,15 @@
                 sessionMessageCount = 0;
                 updateSessionStats();
             }
-        }        function newChatSession() {
+        }        
+        
+        function newChatSession() {
             if (confirm('Start a new chat session? Current conversation will be saved but a new session will begin.')) {
                 createNewConversation();
             }
-        }        async function sendMessage() {
+        }        
+        
+        async function sendMessage() {
             const message = messageInput.value.trim();
             if (!message || isWaitingForResponse) return;
 
@@ -1738,7 +1750,9 @@
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }                const reader = response.body.getReader();
+                }                
+                
+                const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let currentMessageDiv = null;
                 let currentContentDiv = null;
