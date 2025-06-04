@@ -17,19 +17,32 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
-
-        :root {
-            --primary-color: #0066cc;
-            --primary-hover: #0052a3;
-            --background: #f8fafc;
+        }        :root {
+            --primary-color: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary-color: #ec4899;
+            --accent-color: #06b6d4;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --background: #fafbfe;
             --surface: #ffffff;
+            --surface-elevated: #f8fafc;
+            --surface-hover: #f1f5f9;
             --text-primary: #1e293b;
             --text-secondary: #64748b;
+            --text-muted: #94a3b8;
             --border: #e2e8f0;
+            --border-light: #f1f5f9;
             --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
             --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            --gradient-secondary: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         body {
@@ -44,17 +57,16 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 20px;
-        }
-
-        /* Header */
+        }        /* Header Enhancements */
         .header {
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-light);
             padding: 1rem 0;
             position: sticky;
             top: 0;
             z-index: 100;
-            backdrop-filter: blur(10px);
+            transition: var(--transition);
         }
 
         .header-content {
@@ -70,10 +82,20 @@
             font-weight: 700;
             font-size: 1.25rem;
             color: var(--primary-color);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .logo:hover {
+            transform: translateY(-1px);
         }
 
         .logo i {
             font-size: 1.5rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .status-indicator {
@@ -82,6 +104,15 @@
             gap: 8px;
             font-size: 0.875rem;
             color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            background: var(--surface-elevated);
+            border-radius: 50px;
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+
+        .status-indicator:hover {
+            background: var(--surface-hover);
         }
 
         .status-dot {
@@ -304,25 +335,77 @@
                 transform: translateY(-10px);
                 opacity: 1;
             }
-        }
-
-        /* Welcome Message */
+        }        /* Welcome Message Enhancement */
         .welcome-message {
             text-align: center;
-            padding: 3rem 2rem;
-            color: var(--text-secondary);
+            padding: 4rem 2rem;
+            background: var(--gradient-primary);
+            color: white;
+            border-radius: var(--border-radius-lg);
+            margin: 1rem;
+            position: relative;
+            overflow: hidden;
         }
 
-        .welcome-message i {
-            font-size: 3rem;
+        .welcome-message::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+            opacity: 0.1;
+        }
+
+        .welcome-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .ai-avatar {
+            font-size: 4rem;
             margin-bottom: 1rem;
-            color: var(--primary-color);
+            display: block;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
         }
 
         .welcome-message h3 {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
+            font-weight: 700;
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .welcome-message p {
+            font-size: 1.125rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .welcome-features {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .feature-tag {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         /* Sidebar (for larger screens) */
@@ -413,6 +496,93 @@
             text-align: center;
         }
 
+        /* Enhanced Action Buttons */
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 100%;
+            text-align: left;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .action-btn.primary {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .action-btn.secondary {
+            background: var(--surface-elevated);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .action-btn.secondary:hover {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .action-btn.accent {
+            background: var(--gradient-secondary);
+            color: white;
+        }
+
+        .action-btn.info {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .action-btn i {
+            font-size: 1rem;
+        }
+
+        /* Memory Conservation Indicator */
+        .memory-indicator {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .memory-bar {
+            background: var(--border-light);
+            border-radius: 50px;
+            height: 6px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .memory-fill {
+            background: var(--gradient-primary);
+            height: 100%;
+            border-radius: 50px;
+            transition: width 0.3s ease;
+        }
+
+        .memory-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
         /* Utility Classes */
         .hidden {
             display: none !important;
@@ -465,20 +635,45 @@
                         <span class="stat-label">Response Time</span>
                         <span class="stat-value" id="responseTime">-</span>
                     </div>
-                </div>
-
-                <div class="sidebar-section">
+                </div>                <div class="sidebar-section">
                     <h3><i class="fas fa-cog"></i> Actions</h3>
-                    <button class="send-button" onclick="clearChat()" style="width: 100%; border-radius: 8px; height: 40px;">
-                        <i class="fas fa-trash"></i> Clear Chat
-                    </button>
-                </div>
-
-                <div class="sidebar-section">
+                    <div class="action-buttons">
+                        <button class="action-btn primary" onclick="newChatSession()">
+                            <i class="fas fa-plus"></i>
+                            <span>New Session</span>
+                        </button>
+                        <button class="action-btn secondary" onclick="clearChatHistory()">
+                            <i class="fas fa-trash"></i>
+                            <span>Clear History</span>
+                        </button>
+                        <button class="action-btn accent" onclick="exportChatHistory()">
+                            <i class="fas fa-download"></i>
+                            <span>Export Chat</span>
+                        </button>
+                        <button class="action-btn info" onclick="showSessionInfo()">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Session Info</span>
+                        </button>
+                    </div>
+                </div>                <div class="sidebar-section">
                     <h3><i class="fas fa-info-circle"></i> About</h3>
                     <p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5;">
                         This is your personal AI assistant powered by Phi-3 Mini, running locally for complete privacy and control.
                     </p>
+                    
+                    <!-- Memory Conservation Indicator -->
+                    <div class="memory-indicator">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.875rem; font-weight: 500;">Memory Usage</span>
+                            <span id="memoryCount" style="font-size: 0.75rem; color: var(--text-muted);">0/50</span>
+                        </div>
+                        <div class="memory-bar">
+                            <div class="memory-fill" id="memoryFill" style="width: 0%;"></div>
+                        </div>
+                        <div class="memory-text">
+                            Keeping last 50 messages for optimal performance
+                        </div>
+                    </div>
                 </div>
             </aside>
 
@@ -513,14 +708,18 @@
                 </div>
             </div>
         </div>
-    </main>
-
-    <script>
+    </main>    <script>
         // Application State
-        let sessionId = 'web_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        let sessionId = localStorage.getItem('chatSessionId') || 'web_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         let sessionMessageCount = 0;
         let isWaitingForResponse = false;
         let lastResponseTime = 0;
+        let chatHistory = JSON.parse(localStorage.getItem('chatHistory_' + sessionId)) || [];
+        let sessionStartTime = localStorage.getItem('sessionStartTime_' + sessionId) || Date.now();
+
+        // Save session ID to localStorage
+        localStorage.setItem('chatSessionId', sessionId);
+        localStorage.setItem('sessionStartTime_' + sessionId, sessionStartTime);
 
         // API Configuration
         const API_BASE = window.location.origin; // Uses same domain as the page
@@ -581,12 +780,111 @@
         function updateStatus(status, text) {
             statusDot.className = `status-dot ${status}`;
             statusText.textContent = text;
-        }
-
-        function updateModelInfo(model) {
+        }        function updateModelInfo(model) {
             const modelElement = document.getElementById('aiModel');
             if (modelElement && model) {
                 modelElement.textContent = model;
+            }
+        }
+
+        // Chat History Management
+        function saveChatHistory() {
+            localStorage.setItem('chatHistory_' + sessionId, JSON.stringify(chatHistory));
+        }
+
+        function addToChatHistory(role, content) {
+            const entry = {
+                role: role,
+                content: content,
+                timestamp: Date.now(),
+                formatted_time: new Date().toLocaleTimeString()
+            };
+            
+            chatHistory.push(entry);
+            
+            // Keep only last 50 messages for memory conservation
+            if (chatHistory.length > 50) {
+                chatHistory = chatHistory.slice(-50);
+            }
+            
+            saveChatHistory();
+        }
+
+        function loadChatHistory() {
+            if (chatHistory.length === 0) return;
+            
+            // Clear welcome message
+            const welcomeMessage = chatMessages.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+            
+            // Restore messages from history
+            chatHistory.forEach(entry => {
+                addMessage(entry.role, entry.content, false, false); // Don't save to history again
+            });
+            
+            sessionMessageCount = chatHistory.filter(entry => entry.role === 'user').length;
+            updateSessionStats();
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function clearChatHistory() {
+            if (confirm('Are you sure you want to clear the chat history? This cannot be undone.')) {
+                chatHistory = [];
+                localStorage.removeItem('chatHistory_' + sessionId);
+                
+                // Clear the chat display
+                chatMessages.innerHTML = `
+                    <div class="welcome-message">
+                        <div class="welcome-content">
+                            <div class="ai-avatar">🤖</div>
+                            <h3>Welcome to Your Personal AI Assistant!</h3>
+                            <p>I'm powered by Phi-3 Mini and running privately on your infrastructure. How can I help you today?</p>
+                            <div class="welcome-features">
+                                <span class="feature-tag">🔒 Private</span>
+                                <span class="feature-tag">💾 Memory</span>
+                                <span class="feature-tag">⚡ Fast</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                sessionMessageCount = 0;
+                updateSessionStats();
+            }
+        }
+
+        function newChatSession() {
+            if (confirm('Start a new chat session? Current conversation will be saved but a new session will begin.')) {
+                // Generate new session ID
+                sessionId = 'web_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('chatSessionId', sessionId);
+                localStorage.setItem('sessionStartTime_' + sessionId, Date.now());
+                
+                // Reset chat history
+                chatHistory = [];
+                sessionMessageCount = 0;
+                
+                // Clear display and show welcome
+                chatMessages.innerHTML = `
+                    <div class="welcome-message">
+                        <div class="welcome-content">
+                            <div class="ai-avatar">🤖</div>
+                            <h3>New Chat Session Started!</h3>
+                            <p>I'm ready to help you with a fresh conversation. What would you like to discuss?</p>
+                            <div class="welcome-features">
+                                <span class="feature-tag">🔒 Private</span>
+                                <span class="feature-tag">💾 Memory</span>
+                                <span class="feature-tag">⚡ Fast</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                updateSessionStats();
             }
         }
 
@@ -654,9 +952,7 @@
                 sendButton.disabled = false;
                 messageInput.focus();
             }
-        }
-
-        function addMessage(sender, text, isError = false) {
+        }        function addMessage(sender, text, isError = false, saveToHistory = true) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${sender}`;
 
@@ -679,6 +975,11 @@
             messageDiv.appendChild(contentDiv);
             messageDiv.appendChild(metaDiv);
             chatMessages.appendChild(messageDiv);
+
+            // Save to chat history (unless explicitly disabled)
+            if (saveToHistory && !isError) {
+                addToChatHistory(sender, text);
+            }
 
             // Scroll to bottom
             chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -730,13 +1031,63 @@
                 updateSessionStats();
                 messageInput.focus();
             }
-        }
-
-        function updateSessionStats() {
+        }        function updateSessionStats() {
             const sessionElement = document.getElementById('sessionMessages');
             if (sessionElement) {
                 sessionElement.textContent = sessionMessageCount;
             }
+            
+            // Update memory indicator
+            updateMemoryIndicator();
+        }
+
+        function updateMemoryIndicator() {
+            const memoryCount = document.getElementById('memoryCount');
+            const memoryFill = document.getElementById('memoryFill');
+            
+            if (memoryCount && memoryFill) {
+                const currentCount = chatHistory.length;
+                const maxCount = 50;
+                const percentage = (currentCount / maxCount) * 100;
+                
+                memoryCount.textContent = `${currentCount}/${maxCount}`;
+                memoryFill.style.width = `${percentage}%`;
+                
+                // Change color based on usage
+                if (percentage > 90) {
+                    memoryFill.style.background = 'var(--error-color)';
+                } else if (percentage > 70) {
+                    memoryFill.style.background = 'var(--warning-color)';
+                } else {
+                    memoryFill.style.background = 'var(--gradient-primary)';
+                }
+            }
+        }
+
+        function showSessionInfo() {
+            const sessionDuration = Date.now() - parseInt(sessionStartTime);
+            const hours = Math.floor(sessionDuration / (1000 * 60 * 60));
+            const minutes = Math.floor((sessionDuration % (1000 * 60 * 60)) / (1000 * 60));
+            
+            const info = `
+Session Information:
+━━━━━━━━━━━━━━━━━━━━
+
+📋 Session ID: ${sessionId}
+⏰ Duration: ${hours}h ${minutes}m
+💬 Messages: ${chatHistory.length}/50
+📊 User Messages: ${chatHistory.filter(m => m.role === 'user').length}
+🤖 AI Responses: ${chatHistory.filter(m => m.role === 'assistant').length}
+🕒 Started: ${new Date(parseInt(sessionStartTime)).toLocaleString()}
+⚡ Last Response: ${lastResponseTime}ms
+
+🧠 Memory Management:
+• Automatically keeps last 50 messages
+• Older messages are archived locally
+• Session persists across browser sessions
+            `.trim();
+            
+            alert(info);
         }
 
         async function updateStats() {
@@ -757,7 +1108,61 @@
             } catch (error) {
                 console.error('Failed to update stats:', error);
             }
+        }        // Export chat history
+        function exportChatHistory() {
+            if (chatHistory.length === 0) {
+                alert('No chat history to export.');
+                return;
+            }
+            
+            const exportData = {
+                sessionId: sessionId,
+                sessionStartTime: new Date(parseInt(sessionStartTime)).toISOString(),
+                exportTime: new Date().toISOString(),
+                messageCount: chatHistory.length,
+                messages: chatHistory.map(entry => ({
+                    role: entry.role,
+                    content: entry.content,
+                    timestamp: new Date(entry.timestamp).toISOString()
+                }))
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chat-history-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
+
+        // Initialize application
+        function initializeApp() {
+            console.log('🚀 Initializing Personal AI Assistant...');
+            console.log('Session ID:', sessionId);
+            console.log('Chat History:', chatHistory.length, 'messages');
+            
+            // Load existing chat history
+            loadChatHistory();
+            
+            // Initial health check
+            checkApiHealth();
+            
+            // Initial stats update
+            updateStats();
+            
+            // Focus on input
+            if (messageInput) {
+                messageInput.focus();
+            }
+            
+            console.log('✅ App initialized successfully');
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializeApp);
 
         // Periodic health checks
         setInterval(checkApiHealth, 30000); // Every 30 seconds

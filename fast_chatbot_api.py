@@ -18,32 +18,54 @@ CORS(app)
 # Configuration
 OLLAMA_BASE_URL = "http://localhost:11434"
 MODEL_NAME = "phi3:mini"  # Change to "mistral:7b" if you prefer
-MAX_CONVERSATION_LENGTH = 10  # Maximum number of exchanges to keep in memory
+MAX_CONVERSATION_LENGTH = 25  # Maximum number of exchanges to keep in memory
+MAX_CONTEXT_MESSAGES = 50  # Maximum messages to include in context
 
 # In-memory conversation storage (replace with Redis/DB for production)
 conversations: Dict[str, List[Dict]] = {}
+session_metadata: Dict[str, Dict] = {}  # Track session info
 
 # Statistics tracking
 stats = {
     "total_requests": 0,
     "successful_requests": 0,
     "failed_requests": 0,
-    "start_time": datetime.now().isoformat()
+    "active_sessions": 0,
+    "start_time": datetime.now().isoformat(),
+    "last_cleanup": datetime.now().isoformat()
 }
 
 def get_session_id(request) -> str:
     """Generate or retrieve session ID"""
-    return request.headers.get('X-Session-ID', 
-           request.remote_addr + "_" + str(int(time.time())))
+    session_id = request.headers.get('X-Session-ID', 
+                 request.remote_addr + "_" + str(int(time.time())))
+    
+    # Track session metadata
+    if session_id not in session_metadata:
+        session_metadata[session_id] = {
+            "created_at": datetime.now().isoformat(),
+            "last_activity": datetime.now().isoformat(),
+            "message_count": 0,
+            "ip_address": request.remote_addr
+        }
+    else:
+        session_metadata[session_id]["last_activity"] = datetime.now().isoformat()
+    
+    return session_id
 
 def get_conversation_history(session_id: str) -> List[Dict]:
-    """Get conversation history for a session"""
+    """Get conversation history for a session with memory conservation"""
     if session_id not in conversations:
         conversations[session_id] = []
+    
+    # Keep only last MAX_CONTEXT_MESSAGES for memory efficiency
+    if len(conversations[session_id]) > MAX_CONTEXT_MESSAGES:
+        conversations[session_id] = conversations[session_id][-MAX_CONTEXT_MESSAGES:]
+    
     return conversations[session_id]
 
 def add_to_conversation(session_id: str, user_message: str, ai_response: str):
-    """Add exchange to conversation history"""
+    """Add exchange to conversation history with automatic cleanup"""
     if session_id not in conversations:
         conversations[session_id] = []
     
@@ -53,9 +75,16 @@ def add_to_conversation(session_id: str, user_message: str, ai_response: str):
         "timestamp": datetime.now().isoformat()
     })
     
-    # Keep only recent exchanges
+    # Update session metadata
+    if session_id in session_metadata:
+        session_metadata[session_id]["message_count"] += 1
+        session_metadata[session_id]["last_activity"] = datetime.now().isoformat()
+    
+    # Keep only recent exchanges to prevent memory bloat
     if len(conversations[session_id]) > MAX_CONVERSATION_LENGTH:
         conversations[session_id] = conversations[session_id][-MAX_CONVERSATION_LENGTH:]
+    
+    logger.info(f"Session {session_id[:8]}... now has {len(conversations[session_id])} exchanges")
 
 def build_context_prompt(session_id: str, current_message: str) -> str:
     """Build prompt with conversation context"""
@@ -319,11 +348,23 @@ def health():
 
 @app.route('/stats', methods=['GET'])
 def get_stats():
-    """Get usage statistics"""
+    """Get usage statistics with enhanced memory info"""
+    # Perform cleanup and update active sessions
+    cleanup_old_sessions()
+    
+    total_messages = sum(len(conv) for conv in conversations.values())
+    
     return jsonify({
         **stats,
-        "active_sessions": len(conversations),
+        "active_sessions": len(session_metadata),
+        "total_conversations": len(conversations),
+        "total_messages_in_memory": total_messages,
         "model": MODEL_NAME,
+        "memory_conservation": {
+            "max_conversation_length": MAX_CONVERSATION_LENGTH,
+            "max_context_messages": MAX_CONTEXT_MESSAGES,
+            "cleanup_enabled": True
+        },
         "timestamp": datetime.now().isoformat()
     })
 
@@ -369,6 +410,27 @@ def zoho_webhook():
             "response": "Sorry, something went wrong.",
             "success": False
         }), 500
+
+def cleanup_old_sessions():
+    """Clean up sessions older than 24 hours"""
+    cutoff_time = datetime.now().timestamp() - (24 * 60 * 60)  # 24 hours ago
+    sessions_to_remove = []
+    
+    for session_id, metadata in session_metadata.items():
+        last_activity = datetime.fromisoformat(metadata["last_activity"]).timestamp()
+        if last_activity < cutoff_time:
+            sessions_to_remove.append(session_id)
+    
+    for session_id in sessions_to_remove:
+        conversations.pop(session_id, None)
+        session_metadata.pop(session_id, None)
+        logger.info(f"Cleaned up old session: {session_id[:8]}...")
+    
+    if sessions_to_remove:
+        logger.info(f"Cleaned up {len(sessions_to_remove)} old sessions")
+    
+    stats["last_cleanup"] = datetime.now().isoformat()
+    stats["active_sessions"] = len(session_metadata)
 
 if __name__ == '__main__':
     print("🚀 Starting Personal AI Assistant API...")

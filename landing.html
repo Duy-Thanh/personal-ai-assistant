@@ -18,20 +18,29 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
-
-        :root {
-            --primary-color: #0066cc;
-            --primary-hover: #0052a3;
-            --background: #f8fafc;
+        }        :root {
+            --primary-color: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary-color: #ec4899;
+            --accent-color: #06b6d4;
+            --success-color: #10b981;
+            --background: #fafbfe;
             --surface: #ffffff;
+            --surface-elevated: #f8fafc;
             --text-primary: #1e293b;
             --text-secondary: #64748b;
+            --text-muted: #94a3b8;
             --border: #e2e8f0;
+            --border-light: #f1f5f9;
             --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
             --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            --gradient-hero: linear-gradient(135deg, #6366f1 0%, #8b5cf6 25%, #ec4899 50%, #06b6d4 75%, #10b981 100%);
+            --gradient-card: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         body {
@@ -380,8 +389,7 @@
                 <p class="subtitle">
                     Experience the power of ChatGPT with complete privacy and control. 
                     Powered by Phi-3 Mini running on your own infrastructure.
-                </p>
-                <a href="#" class="cta-button" onclick="startChat(event)">
+                </p>                <a href="/chat" class="cta-button">
                     <i class="fas fa-comments"></i>
                     Start Chatting Now
                 </a>
@@ -572,22 +580,7 @@
             } catch (error) {
                 console.error('Failed to load stats:', error);
             }
-        }
-
-        function startChat(event) {
-            event.preventDefault();
-            
-            // Show loading
-            document.getElementById('loadingOverlay').style.display = 'block';
-            
-            // Check if we're already on the chat page or need to redirect
-            setTimeout(() => {
-                // Redirect to chat interface (same page but different route)
-                window.location.href = '/chat';
-            }, 1000);
-        }
-
-        // Demo animation
+        }        // Demo animation
         function animateDemoMessages() {
             const messages = document.querySelectorAll('.demo-message');
             messages.forEach((message, index) => {
