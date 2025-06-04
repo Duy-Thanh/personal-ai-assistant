@@ -1721,9 +1721,11 @@
                 sendButton.disabled = false;
                 messageInput.focus();
             }
-        }
-
+        }        
+        
         async function sendMessageWithStreaming(message, startTime) {
+            let hasHiddenTypingIndicator = false; // Track when to hide typing indicator
+            
             try {
                 const response = await fetch(`${API_BASE}/chat/stream`, {
                     method: 'POST',
@@ -1736,15 +1738,11 @@
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const reader = response.body.getReader();
+                }                const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let currentMessageDiv = null;
                 let currentContentDiv = null;
                 let buffer = '';
-
-                hideTypingIndicator();
 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -1753,8 +1751,7 @@
 
                     buffer += decoder.decode(value, { stream: true });
                     const lines = buffer.split('\n');
-                    buffer = lines.pop() || ''; // Keep incomplete line in buffer
-
+                    buffer = lines.pop() || ''; // Keep incomplete line in buffer                    
                     for (const line of lines) {
                         if (line.startsWith('data: ')) {
                             try {
@@ -1767,6 +1764,12 @@
                                         typingText.textContent = data.message;
                                     }
                                 } else if (data.status === 'streaming') {
+                                    // Hide typing indicator when first streaming content arrives
+                                    if (!hasHiddenTypingIndicator) {
+                                        hideTypingIndicator();
+                                        hasHiddenTypingIndicator = true;
+                                    }
+                                    
                                     // Create or update streaming message
                                     if (!currentMessageDiv) {
                                         currentMessageDiv = document.createElement('div');
@@ -1807,8 +1810,7 @@
                                     sessionMessageCount++;
                                     updateStats();
                                     
-                                    // Save to history manually (since streaming doesn't go through addMessage)
-                                    addToChatHistory('assistant', data.full_response);
+                                    // Save to history manually (since streaming doesn't go through addMessage)                                    addToChatHistory('assistant', data.full_response);
                                     
                                     break;
                                 } else if (data.status === 'error') {
@@ -1823,6 +1825,11 @@
                     }
                 }
             } catch (error) {
+                // Ensure typing indicator is hidden before fallback
+                if (!hasHiddenTypingIndicator) {
+                    hideTypingIndicator();
+                }
+                
                 // Fallback to regular endpoint
                 console.warn('Streaming failed, falling back to regular endpoint:', error);
                 await sendMessageFallback(message, startTime);
@@ -1857,13 +1864,13 @@
                     updateStats();
                 } else {
                     addMessage('assistant', `Error: ${data.error || 'Unknown error occurred'}`, true);
-                }
-
-            } catch (error) {
+                }            } catch (error) {
                 hideTypingIndicator();
                 throw error; // Re-throw to be handled by the main function
             }
-        }function addMessage(sender, text, isError = false, saveToHistory = true) {
+        }
+
+        function addMessage(sender, text, isError = false, saveToHistory = true) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${sender}`;
 

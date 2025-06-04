@@ -40,7 +40,7 @@ Type=simple
 User=$USER
 WorkingDirectory=/home/$USER/personal-ai-assistant
 Environment=PATH=/home/$USER/personal-ai-assistant/venv/bin
-ExecStart=/home/$USER/personal-ai-assistant/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 120 fast_chatbot_api:app
+ExecStart=/home/$USER/personal-ai-assistant/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 650 --keep-alive 2 --max-requests 1000 --max-requests-jitter 50 fast_chatbot_api:app
 Restart=always
 RestartSec=3
 
