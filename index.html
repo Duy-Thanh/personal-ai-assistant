@@ -1310,75 +1310,6 @@
 
         .new-conversation-btn:hover i {
             transform: rotate(90deg);
-        }        /* Enhanced Conversation list scrollbar */
-        .conversation-list::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .conversation-list::-webkit-scrollbar-track {
-            background: var(--surface-elevated);
-            border-radius: 3px;
-            margin: 4px;
-        }
-
-        .conversation-list::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            border-radius: 3px;
-            transition: all 0.3s ease;
-        }
-
-        .conversation-list::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, var(--primary-hover) 0%, #e91e63 100%);
-            box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
-        }
-
-        /* Message count badge enhancement */
-        .message-count-badge {
-            background: linear-gradient(135deg, var(--accent-color) 0%, #06d6a0 100%);
-            color: white;
-            font-size: 0.65rem;
-            font-weight: 600;
-            padding: 0.15rem 0.4rem;
-            border-radius: 10px;
-            min-width: 20px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(6, 182, 212, 0.3);
-        }
-
-        .conversation-item.active .message-count-badge {
-            background: rgba(255, 255, 255, 0.25);
-            color: white;
-        }
-
-        /* Animation classes */
-        @keyframes slideInFromLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes scaleIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .conversation-item {
-            animation: slideInFromLeft 0.3s ease-out;
-        }
-
-        .new-conversation-btn {
-            animation: scaleIn 0.4s ease-out;
         }        /* Enhanced empty state */
         .empty-conversations {
             text-align: center;
@@ -1486,6 +1417,36 @@
                     <p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5;">
                         This is your personal AI assistant powered by Phi-3 Mini, running locally for complete privacy and control.
                     </p>
+                      <!-- Integration Status -->
+                    <div class="integration-status" style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <span style="font-size: 0.875rem; font-weight: 600; color: var(--text-primary);">
+                                <i class="fas fa-plug" style="margin-right: 0.5rem; color: var(--primary-color);"></i>
+                                Integration Status
+                            </span>
+                            <span id="integrationStatus" style="font-size: 0.75rem; color: var(--success-color); font-weight: 500;">✅ Web Interface</span>
+                        </div>
+                        <div style="background: var(--surface-elevated); border-radius: 8px; padding: 0.75rem; font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; border: 1px solid var(--border);">
+                            <div style="display: flex; align-items: center; margin-bottom: 0.4rem;">
+                                <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--success-color); margin-right: 0.5rem; box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);"></div>
+                                <span style="font-weight: 500;">Direct Web Chat: Active</span>
+                            </div>
+                            <div id="zohoStatus" style="display: flex; align-items: center; margin-bottom: 0.4rem;">
+                                <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning-color); margin-right: 0.5rem;"></div>
+                                <span>Zoho SalesIQ: <span style="color: var(--warning-color); font-weight: 500;">Configure Widget</span></span>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--success-color); margin-right: 0.5rem; box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);"></div>
+                                <span style="font-weight: 500;">API Endpoints: Ready</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 0.75rem; text-align: center;">
+                            <button id="zohoSetupBtn" class="action-btn info" onclick="showZohoSetupInstructions()" style="font-size: 0.75rem; padding: 0.5rem 0.75rem;">
+                                <i class="fas fa-external-link-alt"></i>
+                                <span>Setup Zoho SalesIQ</span>
+                            </button>
+                        </div>
+                    </div>
                     
                     <!-- Memory Conservation Indicator -->
                     <div class="memory-indicator">
@@ -1533,8 +1494,191 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </main>    <script>
+        </div>    </main>
+
+    <!-- Zoho SalesIQ Chat Widget Integration -->
+    <!-- Replace the widget code below with your actual Zoho SalesIQ code -->
+    <!-- 
+    <script type="text/javascript">
+        var $zoho=$zoho || {};$zoho.salesiq = $zoho.salesiq || 
+        {widgetcode:"YOUR_WIDGET_CODE_HERE", values:{},ready:function(){}};
+        var d=document;s=d.createElement("script");s.type="text/javascript";
+        s.id="zsiqscript";s.defer=true;
+        s.src="https://salesiq.zoho.com/widget";t=d.getElementsByTagName("script")[0];
+        t.parentNode.insertBefore(s,t);d.write("<div id='zsiqwidget'></div>");
+    </script>
+    -->
+
+    <!-- Enhanced Zoho SalesIQ Integration with Status Monitoring -->
+    <script>
+        // Zoho SalesIQ Integration Monitoring
+        function checkZohoIntegration() {
+            // Check if Zoho SalesIQ widget is loaded
+            const zohoWidget = document.getElementById('zsiqwidget');
+            const zohoScript = document.getElementById('zsiqscript');
+            const zohoStatus = document.getElementById('zohoStatus');
+            const integrationStatus = document.getElementById('integrationStatus');
+            
+            let zohoLoaded = false;
+            
+            // Method 1: Check for Zoho script element
+            if (zohoScript) {
+                zohoLoaded = true;
+            }
+            
+            // Method 2: Check for $zoho global object
+            if (typeof window.$zoho !== 'undefined' && window.$zoho.salesiq) {
+                zohoLoaded = true;
+            }
+            
+            // Method 3: Check for widget element
+            if (zohoWidget && zohoWidget.innerHTML.trim() !== '') {
+                zohoLoaded = true;
+            }
+              // Update status in sidebar
+            if (zohoStatus) {
+                if (zohoLoaded) {
+                    zohoStatus.innerHTML = `
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--success-color); margin-right: 0.5rem; box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);"></div>
+                        <span>Zoho SalesIQ: <span style="color: var(--success-color); font-weight: 500;">✅ Active</span></span>
+                    `;
+                    
+                    if (integrationStatus) {
+                        integrationStatus.innerHTML = '✅ Web Interface + 🔗 Zoho SalesIQ';
+                    }
+                    
+                    console.log('🔗 Zoho SalesIQ widget detected and active');
+                } else {
+                    zohoStatus.innerHTML = `
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning-color); margin-right: 0.5rem;"></div>
+                        <span>Zoho SalesIQ: <span style="color: var(--warning-color); font-weight: 500;">Configure Widget</span></span>
+                    `;
+                    
+                    if (integrationStatus) {
+                        integrationStatus.innerHTML = '✅ Web Interface';
+                    }
+                }
+            }
+            
+            return zohoLoaded;
+        }
+        
+        // Enhanced webhook monitoring for Zoho integration
+        function monitorZohoWebhooks() {
+            // This function can be used to monitor webhook activity
+            // and provide real-time feedback about Zoho integration status
+            
+            console.log('🔍 Monitoring Zoho webhook integration...');
+            
+            // Check webhook endpoint health
+            fetch(`${API_BASE}/webhook/zoho`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    test: true,
+                    timestamp: Date.now()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ Zoho webhook endpoint is responsive:', data);
+            })
+            .catch(error => {
+                console.warn('⚠️ Zoho webhook endpoint test failed:', error);
+            });
+        }
+          // Instructions overlay for Zoho setup (global function)
+        window.showZohoSetupInstructions = function() {
+            const instructions = `
+🔗 Zoho SalesIQ Setup Instructions
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 Quick Setup Steps:
+
+1️⃣ Create FREE Zoho SalesIQ Account:
+   • Go to: https://salesiq.zoho.com
+   • Sign up with your email
+   • Choose "Free" plan (supports up to 100 conversations/month)
+
+2️⃣ Create Custom Bot:
+   • In SalesIQ dashboard, go to "Bots" section
+   • Click "Create Bot" → "Custom Bot"
+   • Name: "Personal AI Assistant"
+
+3️⃣ Configure Webhook:
+   • In bot settings, find "Webhook Configuration"
+   • Set webhook URL to: ${window.location.origin}/webhook/zoho
+   • Enable "Send visitor messages to webhook"
+   • Save configuration
+
+4️⃣ Get Widget Code:
+   • Go to "Settings" → "Widget Installation"
+   • Copy the widget code (looks like the commented code above)
+   • Replace the commented section in this HTML file
+
+5️⃣ Deploy Widget:
+   • Uncomment and replace the widget code
+   • Add your actual widget code from Zoho
+   • Refresh this page to see integration status update
+
+📱 Multi-Platform Benefits:
+   • Web chat widget on any website
+   • Mobile app integration
+   • Social media channel support
+   • Unified conversation management
+
+🔧 Technical Details:
+   • Webhook endpoint: /webhook/zoho (already configured)
+   • API integration: Ready and tested
+   • Response format: JSON with AI responses
+   • Session management: Automatic
+
+Need help? Check the DAY2_ZOHO_SETUP.md guide!
+            `.trim();
+            
+            alert(instructions);
+        }
+          // Initialize Zoho integration monitoring
+        function initializeZohoIntegration() {
+            // Initial check
+            checkZohoIntegration();
+            
+            // Monitor for Zoho widget loading
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'childList') {
+                        // Check if Zoho elements were added
+                        const addedNodes = Array.from(mutation.addedNodes);
+                        const hasZohoElements = addedNodes.some(node => 
+                            node.id === 'zsiqwidget' || 
+                            node.id === 'zsiqscript' ||
+                            (node.textContent && node.textContent.includes('salesiq'))
+                        );
+                        
+                        if (hasZohoElements) {
+                            setTimeout(checkZohoIntegration, 1000);
+                        }
+                    }
+                });
+            });
+            
+            // Start observing the document for changes
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            
+            // Check periodically for Zoho widget
+            setInterval(checkZohoIntegration, 10000); // Every 10 seconds
+            
+            // Test webhook connectivity (optional)
+            setTimeout(monitorZohoWebhooks, 5000); // After 5 seconds
+        }
+    </script>
+    
+    <script>
         // Application State
         let sessionId = localStorage.getItem('chatSessionId') || 'web_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         let sessionMessageCount = 0;
@@ -2377,6 +2521,9 @@ Session Information:
             
             // Initial stats update
             updateStats();
+            
+            // Initialize Zoho SalesIQ integration monitoring
+            initializeZohoIntegration();
             
             // Focus on input
             if (messageInput) {

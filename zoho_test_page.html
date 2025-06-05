@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal AI Assistant - Chat Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .header {
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+        
+        .info-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .feature-list {
+            text-align: left;
+            margin: 20px 0;
+        }
+        
+        .feature-list li {
+            margin: 10px 0;
+            padding-left: 10px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px;
+        }
+        
+        .status.day1 {
+            background: #28a745;
+            color: white;
+        }
+        
+        .status.day2 {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .status.day3 {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .chat-instructions {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            opacity: 0.8;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Personal AI Assistant</h1>
+            <p class="subtitle">Your Private ChatGPT Clone via Zoho Chat</p>
+            
+            <div class="status-bar">
+                <span class="status day1">✅ Day 1: Backend Ready</span>
+                <span class="status day2">🔄 Day 2: Zoho Integration</span>
+                <span class="status day3">⏳ Day 3: Polish & Deploy</span>
+            </div>
+        </div>
+        
+        <div class="info-card">
+            <h2>🎯 Testing Zoho Chat Integration</h2>
+            <p>This page is for testing your Zoho SalesIQ chat widget integration.</p>
+            
+            <div class="chat-instructions">
+                <h3>📝 Setup Instructions:</h3>
+                <ol class="feature-list">
+                    <li>Complete your Zoho SalesIQ account setup</li>
+                    <li>Configure the custom bot with webhook to your API</li>
+                    <li>Add your Zoho chat widget code below (replace the placeholder)</li>
+                    <li>Test the chat widget by sending a message</li>
+                    <li>Verify AI responses are working correctly</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="info-card">
+            <h2>🔧 Technical Details</h2>
+            <div class="feature-list">
+                <li><strong>API Endpoint:</strong> /webhook/zoho</li>
+                <li><strong>LLM Model:</strong> Phi-3 Mini (or Mistral 7B)</li>
+                <li><strong>Session Management:</strong> Visitor ID based</li>
+                <li><strong>Context Memory:</strong> Conversation history maintained</li>
+                <li><strong>Response Format:</strong> JSON with success status</li>
+            </div>
+        </div>
+        
+        <div class="info-card">
+            <h2>💬 Chat Widget Area</h2>
+            <p>Once you add your Zoho SalesIQ widget code, the chat will appear here.</p>
+            
+            <!-- Replace this comment with your Zoho SalesIQ widget code -->
+            <!-- 
+            Example format:
+            <script type="text/javascript">
+                var $zoho=$zoho || {};$zoho.salesiq = $zoho.salesiq || 
+                {widgetcode:"your-widget-code", values:{},ready:function(){}};
+                var d=document;s=d.createElement("script");s.type="text/javascript";
+                s.id="zsiqscript";s.defer=true;
+                s.src="https://salesiq.zoho.com/widget";t=d.getElementsByTagName("script")[0];
+                t.parentNode.insertBefore(s,t);d.write("<div id='zsiqwidget'></div>");
+            </script>
+            -->
+            
+            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <p><strong>🔄 Next Step:</strong> Add your Zoho SalesIQ widget code above this section</p>
+                <p>The chat widget will appear in the bottom-right corner once configured.</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>🚀 Personal AI Assistant Project - Day 2 Testing</p>
+            <p>Powered by your own LLM + Zoho SalesIQ</p>
+        </div>
+    </div>
+</body>
+</html>
