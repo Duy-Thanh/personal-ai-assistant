@@ -1705,10 +1705,21 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            // Load existing data first
+            chatHistory = JSON.parse(localStorage.getItem('chatHistory_' + sessionId)) || [];
+            
             initializeConversations();
             checkApiHealth();
             setupEventListeners();
             messageInput.focus();
+            
+            // Load existing chat history if available
+            if (chatHistory.length > 0) {
+                loadChatHistory();
+            }
+            
+            // Initialize Zoho integration monitoring
+            initializeZohoIntegration();
             
             // Auto-resize textarea
             messageInput.addEventListener('input', function() {
@@ -1894,12 +1905,14 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
             saveConversations();
             switchToConversation(newConversationId);
         }        
-        
-        function switchToConversation(conversationId) {
+          function switchToConversation(conversationId) {
             if (conversationId === currentConversationId) return;
             
-            // Save current conversation state
-            updateCurrentConversation();
+            // Force save current conversation state before switching
+            if (currentConversationId && chatHistory.length > 0) {
+                saveChatHistory();
+                updateCurrentConversation();
+            }
             
             // Switch to new conversation
             currentConversationId = conversationId;
@@ -1911,6 +1924,9 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
             // Load conversation data
             chatHistory = JSON.parse(localStorage.getItem('chatHistory_' + sessionId)) || [];
             sessionStartTime = localStorage.getItem('sessionStartTime_' + sessionId) || conversations[conversationId].createdAt;
+            
+            // Reset session message count based on loaded history
+            sessionMessageCount = chatHistory.filter(entry => entry.role === 'user').length;
             
             // Clear chat display first
             chatMessages.innerHTML = '';
@@ -1942,9 +1958,7 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
             // Update conversation last active time
             conversations[conversationId].lastActive = Date.now();
             saveConversations();
-        }
-
-        function updateCurrentConversation() {
+        }        function updateCurrentConversation() {
             if (!conversations[currentConversationId]) return;
             
             // Update conversation metadata
@@ -1959,7 +1973,11 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 }
             }
             
+            // Force save conversations
             saveConversations();
+            
+            // Update the conversation list display
+            loadConversationList();
         }
 
         function renameConversation(conversationId) {
@@ -2004,10 +2022,11 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
             }
         }
 
-        // Chat History Management
+        // Chat History Management        
         function saveChatHistory() {
             localStorage.setItem('chatHistory_' + sessionId, JSON.stringify(chatHistory));
-        }        
+            console.log(`💾 Saved chat history for ${sessionId}: ${chatHistory.length} messages`);
+        }
         
         function addToChatHistory(role, content) {
             const entry = {
@@ -2024,17 +2043,23 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 chatHistory = chatHistory.slice(-50);
             }
             
+            // Force save immediately
             saveChatHistory();
             
-            // Update conversation metadata
+            // Update conversation metadata and force save
             updateCurrentConversation();
-        }        
-        
-        function loadChatHistory() {
+            
+            // Debug logging
+            console.log(`💾 Saved ${role} message to conversation ${currentConversationId}:`, content.substring(0, 50) + '...');
+        }
+          function loadChatHistory() {
             if (chatHistory.length === 0) return;
             
+            console.log(`📖 Loading chat history for ${sessionId}: ${chatHistory.length} messages`);
+            
             // Restore messages from history
-            chatHistory.forEach(entry => {
+            chatHistory.forEach((entry, index) => {
+                console.log(`  ${index + 1}. ${entry.role}: ${entry.content.substring(0, 50)}...`);
                 addMessage(entry.role, entry.content, false, false); // Don't save to history again
             });
             
@@ -2207,7 +2232,11 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                                     sessionMessageCount++;
                                     updateStats();
                                     
-                                    // Save to history manually (since streaming doesn't go through addMessage)                                    addToChatHistory('assistant', data.full_response);
+                                    // Save to history manually (since streaming doesn't go through addMessage)
+                                    addToChatHistory('assistant', data.full_response);
+                                    
+                                    // Update conversation metadata immediately
+                                    updateCurrentConversation();
                                     
                                     break;
                                 } else if (data.status === 'error') {
@@ -2531,9 +2560,7 @@ Session Information:
             }
             
             console.log('✅ App initialized successfully');
-        }
-
-        // Initialize when page loads
+        }        // Initialize when page loads
         document.addEventListener('DOMContentLoaded', initializeApp);
 
         // Periodic health checks
@@ -2541,6 +2568,23 @@ Session Information:
         
         // Auto-update stats periodically
         setInterval(updateStats, 10000); // Every 10 seconds
+        
+        // Auto-save conversations periodically (safety net)
+        setInterval(function() {
+            if (chatHistory.length > 0) {
+                saveChatHistory();
+                updateCurrentConversation();
+                console.log('🔄 Auto-saved conversation state');
+            }
+        }, 15000); // Every 15 seconds
+        
+        // Save on page unload
+        window.addEventListener('beforeunload', function() {
+            if (chatHistory.length > 0) {
+                saveChatHistory();
+                updateCurrentConversation();
+            }
+        });
     </script>
 </body>
 </html>
