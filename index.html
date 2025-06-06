@@ -2197,7 +2197,15 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
 
             // Parse different Zoho webhook response formats
             function parseZohoResponse(data) {
-                console.log("📝 Parsing Zoho response:", data);
+                console.log("🔍 Parsing Zoho response:", {
+                    dataType: typeof data,
+                    hasSuccess: "success" in data,
+                    hasResponse: "response" in data,
+                    hasMessage: "message" in data,
+                    hasError: "error" in data,
+                    keys: Object.keys(data || {}),
+                    data: data,
+                });
 
                 // Handle different response formats
                 if (data.success && data.response) {
@@ -2291,25 +2299,43 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                     console.log(`✅ Session ID: ${sessionId}`);
                 }
 
-                // Check if webhook endpoint is reachable (async)
-                fetch(`${API_BASE}/webhook/zoho`, {
-                    method: "OPTIONS",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                })
-                    .then((response) => {
-                        if (!response.ok) {
-                            console.warn(
-                                `⚠️ Webhook endpoint returned ${response.status}`,
+                // Check server health first
+                fetch(`${API_BASE}/health`)
+                    .then((response) => response.json())
+                    .then((data) => {
+                        console.log("✅ Server health check passed:", data);
+
+                        // Now test webhook endpoint
+                        return fetch(`${API_BASE}/webhook/zoho`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                message: { text: "Health check" },
+                                visitor: { id: "health-check" },
+                                test: true,
+                            }),
+                        });
+                    })
+                    .then(async (response) => {
+                        if (response.ok) {
+                            const data = await response.json();
+                            console.log(
+                                "✅ Zoho webhook endpoint is working:",
+                                data,
                             );
                         } else {
-                            console.log("✅ Webhook endpoint is reachable");
+                            const errorText = await response.text();
+                            console.warn(
+                                `⚠️ Webhook endpoint returned ${response.status}:`,
+                                errorText,
+                            );
                         }
                     })
                     .catch((error) => {
                         console.warn(
-                            "⚠️ Webhook endpoint not reachable:",
+                            "⚠️ Server or webhook endpoint not reachable:",
                             error.message,
                         );
                     });
@@ -3211,6 +3237,11 @@ ${document.getElementById("integrationStatus").textContent}`,
                         },
                     };
 
+                    console.log("📤 Sending to Zoho webhook:", {
+                        url: `${API_BASE}/webhook/zoho`,
+                        payload: requestBody,
+                    });
+
                     const response = await fetch(`${API_BASE}/webhook/zoho`, {
                         method: "POST",
                         headers: {
@@ -3220,10 +3251,18 @@ ${document.getElementById("integrationStatus").textContent}`,
                         body: JSON.stringify(requestBody),
                     });
 
+                    console.log(
+                        "📥 Webhook response status:",
+                        response.status,
+                        response.statusText,
+                    );
+
                     hideTypingIndicator();
 
                     if (response.ok) {
                         const data = await response.json();
+                        console.log("📥 Raw webhook response:", data);
+
                         const parsed = parseZohoResponse(data);
 
                         console.log(
@@ -3259,14 +3298,15 @@ ${document.getElementById("integrationStatus").textContent}`,
                         }
                     } else {
                         const errorText = await response.text();
-                        console.error(
-                            "Zoho webhook error:",
-                            response.status,
-                            errorText,
-                        );
+                        console.error("❌ Zoho webhook error:", {
+                            status: response.status,
+                            statusText: response.statusText,
+                            url: `${API_BASE}/webhook/zoho`,
+                            error: errorText,
+                        });
                         addMessage(
                             "assistant",
-                            `❌ Failed to connect to Zoho SalesIQ webhook (${response.status})`,
+                            `❌ Failed to connect to Zoho SalesIQ webhook (${response.status}: ${response.statusText})`,
                             true,
                         );
                     }
