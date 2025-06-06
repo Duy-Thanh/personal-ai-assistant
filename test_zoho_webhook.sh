@@ -37,18 +37,11 @@ echo "Sending test message: 'Hello AI!'"
 response2=$(curl -s -X POST "$WEBHOOK_URL" \
   -H "Content-Type: application/json" \
   -d '{
-    "event_type": "conversation.visitors.replied",
-    "conversation": {
-      "id": "test_conv_12345",
-      "visitor_id": "test_visitor_789"
-    },
     "message": {
-      "text": "Hello AI!",
-      "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+      "text": "Hello AI!"
     },
     "visitor": {
-      "id": "test_visitor_789",
-      "name": "Test User"
+      "id": "test_visitor_789"
     }
   }')
 

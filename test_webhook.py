@@ -69,21 +69,13 @@ def test_zoho_webhook():
     """Test Zoho webhook with realistic payload"""
     print_header("Test 3: Zoho SalesIQ Webhook")
 
-    # Simulate Zoho webhook payload format
+    # Simulate Zoho webhook payload format (matching API expectations)
     webhook_payload = {
-        "event_type": "conversation.visitors.replied",
-        "conversation": {
-            "id": "test_conv_12345",
-            "visitor_id": "test_visitor_789"
-        },
         "message": {
-            "text": "Hello AI! Can you help me with a question?",
-            "timestamp": datetime.now(datetime.UTC).isoformat()
+            "text": "Hello AI! Can you help me with a question?"
         },
         "visitor": {
-            "id": "test_visitor_789",
-            "name": "Test User",
-            "email": "test@example.com"
+            "id": "test_visitor_789"
         }
     }
 

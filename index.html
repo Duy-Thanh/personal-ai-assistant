@@ -3003,10 +3003,8 @@ ${document.getElementById("integrationStatus").textContent}`,
                             "Content-Type": "application/json",
                         },
                         body: JSON.stringify({
-                            event_type: "conversation.visitors.replied",
                             message: { text: message },
-                            visitor: { id: sessionId, name: "Web User" },
-                            conversation: { id: currentConversationId },
+                            visitor: { id: sessionId },
                         }),
                     });
 
