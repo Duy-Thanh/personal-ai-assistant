@@ -1231,10 +1231,21 @@
                 min-height: 40px;
                 padding: 0.75rem 1rem;
                 gap: 0.5rem;
+                text-align: center;
+                justify-content: center;
+                border-radius: 8px;
+                border: none;
+                cursor: pointer;
+                position: relative;
+                overflow: hidden;
             }
 
             .action-btn:hover {
                 transform: translateY(-2px);
+            }
+
+            .action-btn:active {
+                transform: translateY(0);
             }
 
             .action-btn.accent {
@@ -1246,6 +1257,17 @@
                 background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
                 box-shadow: 0 8px 25px rgba(236, 72, 153, 0.4);
                 transform: translateY(-2px);
+            }
+
+            /* Button spacing */
+            .action-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .action-buttons .action-btn {
+                width: 100%;
             }
 
             /* Enhanced Memory Indicator */
