@@ -3921,6 +3921,11 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
 
             async function sendMessageFallback(message, startTime) {
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => {
+                        controller.abort();
+                    }, 600000); // 10 minute timeout
+
                     const response = await fetch(`${API_BASE}/chat`, {
                         method: "POST",
                         headers: {
@@ -3928,7 +3933,10 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                             "X-Session-ID": sessionId,
                         },
                         body: JSON.stringify({ message: message }),
+                        signal: controller.signal,
                     });
+
+                    clearTimeout(timeoutId);
 
                     const endTime = Date.now();
                     lastResponseTime = endTime - startTime;
