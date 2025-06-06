@@ -377,11 +377,12 @@ def chat_stream():
 
         def generate_stream():
             response = None
+            client_disconnected = False
             try:
                 # Build context-aware prompt
                 prompt = build_context_prompt(session_id, user_message)
 
-                # Send immediate acknowledgment
+                # Send immediate acknowledgment with flush
                 yield f"data: {json.dumps({'status': 'processing', 'message': 'AI is thinking...'})}\n\n"
 
                 # Query Ollama with streaming
@@ -404,52 +405,97 @@ def chat_stream():
 
                 if response.status_code == 200:
                     full_response = ""
+                    chunk_count = 0
                     try:
                         for line in response.iter_lines(decode_unicode=True):
+                            # Check if client is still connected periodically
+                            if chunk_count % 10 == 0:
+                                try:
+                                    # Test if we can still write to the client
+                                    yield ""
+                                except GeneratorExit:
+                                    client_disconnected = True
+                                    logger.info("Client disconnected during streaming")
+                                    break
+
                             if line:
                                 try:
                                     chunk_data = json.loads(line)
                                     if 'response' in chunk_data:
                                         chunk_text = chunk_data['response']
                                         full_response += chunk_text
+                                        chunk_count += 1
 
-                                        # Send chunk to client
-                                        yield f"data: {json.dumps({'status': 'streaming', 'chunk': chunk_text, 'full_response': full_response})}\n\n"
+                                        # Send chunk to client with explicit flush
+                                        chunk_json = json.dumps({
+                                            'status': 'streaming',
+                                            'chunk': chunk_text,
+                                            'full_response': full_response
+                                        })
+                                        yield f"data: {chunk_json}\n\n"
 
                                     if chunk_data.get('done', False):
                                         break
-                                except json.JSONDecodeError:
+                                except json.JSONDecodeError as e:
+                                    logger.warning(f"Failed to parse Ollama response: {e}")
                                     continue
+                    except GeneratorExit:
+                        client_disconnected = True
+                        logger.info("Client disconnected during streaming")
                     finally:
                         # Ensure response is properly closed
                         if response:
-                            response.close()
+                            try:
+                                response.close()
+                            except:
+                                pass
 
-                    # Save to conversation history
-                    if full_response.strip():
-                        add_to_conversation(session_id, user_message, full_response.strip())
-                        stats["successful_requests"] += 1
+                    # Only save and send completion if client is still connected
+                    if not client_disconnected:
+                        if full_response.strip():
+                            add_to_conversation(session_id, user_message, full_response.strip())
+                            stats["successful_requests"] += 1
 
-                        # Send completion signal
-                        yield f"data: {json.dumps({'status': 'complete', 'full_response': full_response.strip(), 'session_id': session_id})}\n\n"
+                            # Send completion signal
+                            completion_json = json.dumps({
+                                'status': 'complete',
+                                'full_response': full_response.strip(),
+                                'session_id': session_id
+                            })
+                            yield f"data: {completion_json}\n\n"
+                        else:
+                            stats["failed_requests"] += 1
+                            yield f"data: {json.dumps({'status': 'error', 'error': 'Empty response from AI'})}\n\n"
                     else:
-                        stats["failed_requests"] += 1
-                        yield f"data: {json.dumps({'status': 'error', 'error': 'Empty response from AI'})}\n\n"
+                        # Client disconnected, but we might have partial response to save
+                        if full_response.strip():
+                            add_to_conversation(session_id, user_message, full_response.strip())
+                            stats["successful_requests"] += 1
+                        else:
+                            stats["failed_requests"] += 1
                 else:
                     stats["failed_requests"] += 1
-                    yield f"data: {json.dumps({'status': 'error', 'error': f'API error: {response.status_code}'})}\n\n"
+                    error_msg = f'API error: {response.status_code}'
+                    logger.error(f"Ollama API error: {error_msg}")
+                    yield f"data: {json.dumps({'status': 'error', 'error': error_msg})}\n\n"
 
             except requests.exceptions.Timeout:
                 stats["failed_requests"] += 1
+                logger.error("Request timed out during streaming")
                 yield f"data: {json.dumps({'status': 'error', 'error': 'Request timed out - AI model is taking too long'})}\n\n"
             except requests.exceptions.ConnectionError as e:
                 stats["failed_requests"] += 1
                 logger.error(f"Connection error during streaming: {e}")
                 yield f"data: {json.dumps({'status': 'error', 'error': 'Connection lost during streaming'})}\n\n"
+            except GeneratorExit:
+                # Client disconnected - this is normal
+                logger.info("Client disconnected from stream")
+                client_disconnected = True
             except Exception as e:
                 stats["failed_requests"] += 1
                 logger.error(f"Streaming error: {e}")
-                yield f"data: {json.dumps({'status': 'error', 'error': str(e)})}\n\n"
+                if not client_disconnected:
+                    yield f"data: {json.dumps({'status': 'error', 'error': str(e)})}\n\n"
             finally:
                 # Ensure proper cleanup
                 if response:
@@ -457,8 +503,12 @@ def chat_stream():
                         response.close()
                     except:
                         pass
-                # Send final event to close the stream
-                yield f"data: {json.dumps({'status': 'stream_end'})}\n\n"
+                # Send final event to close the stream only if client is still connected
+                if not client_disconnected:
+                    try:
+                        yield f"data: {json.dumps({'status': 'stream_end'})}\n\n"
+                    except:
+                        pass
 
         return Response(
             generate_stream(),
@@ -467,7 +517,6 @@ def chat_stream():
                 'Cache-Control': 'no-cache',
                 'Connection': 'keep-alive',
                 'X-Accel-Buffering': 'no',  # Disable nginx buffering
-                'Transfer-Encoding': 'chunked',
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Headers': 'Content-Type, X-Session-ID'
             }

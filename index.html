@@ -3672,8 +3672,15 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
 
             async function sendMessageWithStreaming(message, startTime) {
                 let hasHiddenTypingIndicator = false; // Track when to hide typing indicator
+                let reader = null;
+                let receivedData = false;
 
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => {
+                        controller.abort();
+                    }, 30000); // 30 second timeout
+
                     const response = await fetch(`${API_BASE}/chat/stream`, {
                         method: "POST",
                         headers: {
@@ -3681,7 +3688,10 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                             "X-Session-ID": sessionId,
                         },
                         body: JSON.stringify({ message: message }),
+                        signal: controller.signal,
                     });
+
+                    clearTimeout(timeoutId);
 
                     if (!response.ok) {
                         throw new Error(
@@ -3689,17 +3699,36 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                         );
                     }
 
-                    const reader = response.body.getReader();
+                    reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let currentMessageDiv = null;
                     let currentContentDiv = null;
                     let buffer = "";
 
                     while (true) {
-                        const { done, value } = await reader.read();
+                        let result;
+                        try {
+                            result = await reader.read();
+                        } catch (readError) {
+                            if (!receivedData) {
+                                // If we haven't received any data yet, throw to trigger fallback
+                                throw new Error(
+                                    "Connection failed before receiving data",
+                                );
+                            }
+                            // If we have received some data, break gracefully
+                            console.warn(
+                                "Stream interrupted, but some data was received:",
+                                readError,
+                            );
+                            break;
+                        }
+
+                        const { done, value } = result;
 
                         if (done) break;
 
+                        receivedData = true;
                         buffer += decoder.decode(value, { stream: true });
                         const lines = buffer.split("\n");
                         buffer = lines.pop() || ""; // Keep incomplete line in buffer
@@ -3854,12 +3883,39 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                         hideTypingIndicator();
                     }
 
-                    // Fallback to regular endpoint
-                    console.warn(
-                        "Streaming failed, falling back to regular endpoint:",
-                        error,
-                    );
-                    await sendMessageFallback(message, startTime);
+                    // Clean up reader if it exists
+                    if (reader) {
+                        try {
+                            reader.cancel();
+                        } catch (cancelError) {
+                            console.warn(
+                                "Failed to cancel reader:",
+                                cancelError,
+                            );
+                        }
+                    }
+
+                    // Only fallback if we haven't received any meaningful data
+                    if (!receivedData || error.name === "AbortError") {
+                        console.warn(
+                            "Streaming failed, falling back to regular endpoint:",
+                            error.message || error,
+                        );
+                        await sendMessageFallback(message, startTime);
+                    } else {
+                        // If we got some data but stream was interrupted, just log it
+                        console.warn(
+                            "Stream interrupted after receiving data:",
+                            error.message || error,
+                        );
+
+                        // Ensure any typing indicators are cleaned up
+                        const typingCursor =
+                            document.querySelector(".typing-cursor");
+                        if (typingCursor) {
+                            typingCursor.remove();
+                        }
+                    }
                 }
             }
 
