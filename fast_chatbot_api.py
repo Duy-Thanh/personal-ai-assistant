@@ -376,6 +376,7 @@ def chat_stream():
         session_id = get_session_id(request)
 
         def generate_stream():
+            response = None
             try:
                 # Build context-aware prompt
                 prompt = build_context_prompt(session_id, user_message)
@@ -403,21 +404,26 @@ def chat_stream():
 
                 if response.status_code == 200:
                     full_response = ""
-                    for line in response.iter_lines():
-                        if line:
-                            try:
-                                chunk_data = json.loads(line.decode('utf-8'))
-                                if 'response' in chunk_data:
-                                    chunk_text = chunk_data['response']
-                                    full_response += chunk_text
+                    try:
+                        for line in response.iter_lines(decode_unicode=True):
+                            if line:
+                                try:
+                                    chunk_data = json.loads(line)
+                                    if 'response' in chunk_data:
+                                        chunk_text = chunk_data['response']
+                                        full_response += chunk_text
 
-                                    # Send chunk to client
-                                    yield f"data: {json.dumps({'status': 'streaming', 'chunk': chunk_text, 'full_response': full_response})}\n\n"
+                                        # Send chunk to client
+                                        yield f"data: {json.dumps({'status': 'streaming', 'chunk': chunk_text, 'full_response': full_response})}\n\n"
 
-                                if chunk_data.get('done', False):
-                                    break
-                            except json.JSONDecodeError:
-                                continue
+                                    if chunk_data.get('done', False):
+                                        break
+                                except json.JSONDecodeError:
+                                    continue
+                    finally:
+                        # Ensure response is properly closed
+                        if response:
+                            response.close()
 
                     # Save to conversation history
                     if full_response.strip():
@@ -436,10 +442,23 @@ def chat_stream():
             except requests.exceptions.Timeout:
                 stats["failed_requests"] += 1
                 yield f"data: {json.dumps({'status': 'error', 'error': 'Request timed out - AI model is taking too long'})}\n\n"
+            except requests.exceptions.ConnectionError as e:
+                stats["failed_requests"] += 1
+                logger.error(f"Connection error during streaming: {e}")
+                yield f"data: {json.dumps({'status': 'error', 'error': 'Connection lost during streaming'})}\n\n"
             except Exception as e:
                 stats["failed_requests"] += 1
                 logger.error(f"Streaming error: {e}")
                 yield f"data: {json.dumps({'status': 'error', 'error': str(e)})}\n\n"
+            finally:
+                # Ensure proper cleanup
+                if response:
+                    try:
+                        response.close()
+                    except:
+                        pass
+                # Send final event to close the stream
+                yield f"data: {json.dumps({'status': 'stream_end'})}\n\n"
 
         return Response(
             generate_stream(),
@@ -447,6 +466,8 @@ def chat_stream():
             headers={
                 'Cache-Control': 'no-cache',
                 'Connection': 'keep-alive',
+                'X-Accel-Buffering': 'no',  # Disable nginx buffering
+                'Transfer-Encoding': 'chunked',
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Headers': 'Content-Type, X-Session-ID'
             }
