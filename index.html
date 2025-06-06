@@ -16,10 +16,39 @@
         />
 
         <!-- Font Awesome for icons -->
+        <title>Zoho SalesIQ Chat Integration</title>
         <link
             rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
         />
+        <!-- MathJax for LaTeX support -->
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+        <script
+            id="MathJax-script"
+            async
+            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+        ></script>
+        <script>
+            window.MathJax = {
+                tex: {
+                    inlineMath: [["\\(", "\\)"]],
+                    displayMath: [["\\[", "\\]"]],
+                    processEscapes: true,
+                    processEnvironments: true,
+                },
+                options: {
+                    skipHtmlTags: [
+                        "script",
+                        "noscript",
+                        "style",
+                        "textarea",
+                        "pre",
+                    ],
+                    ignoreHtmlClass: "tex2jax_ignore",
+                    processHtmlClass: "tex2jax_process",
+                },
+            };
+        </script>
 
         <style>
             * {
@@ -1895,10 +1924,24 @@
                             <textarea
                                 id="messageInput"
                                 class="chat-input"
-                                placeholder="Type your message here..."
+                                placeholder="Type your message... (supports LaTeX: \\(x^2\\) for inline, \\[x^2\\] for display)"
                                 rows="1"
-                                maxlength="2000"
+                                maxlength="8192"
                             ></textarea>
+                            <div
+                                id="inputInfo"
+                                style="
+                                    position: absolute;
+                                    bottom: -20px;
+                                    right: 8px;
+                                    font-size: 11px;
+                                    color: var(--text-secondary);
+                                    opacity: 0.7;
+                                    pointer-events: none;
+                                "
+                            >
+                                0 words, 0 chars
+                            </div>
                             <button
                                 id="sendButton"
                                 class="send-button"
@@ -2123,6 +2166,9 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
         </script>
 
         <script>
+            // API Configuration
+            const API_BASE = window.location.origin; // Uses same domain as the page
+
             // Application State
             let sessionId =
                 localStorage.getItem("chatSessionId") ||
@@ -2156,65 +2202,10 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 sessionStartTime,
             );
 
-            // API Configuration
-            const API_BASE = window.location.origin; // Uses same domain as the page
-
-            // DOM Elements
-            const chatMessages = document.getElementById("chatMessages");
-            const messageInput = document.getElementById("messageInput");
-            const sendButton = document.getElementById("sendButton");
-            const statusDot = document.getElementById("statusDot");
-            const statusText = document.getElementById("statusText"); // Initialize
-            document.addEventListener("DOMContentLoaded", function () {
-                // Load existing data first
-                chatHistory =
-                    JSON.parse(
-                        localStorage.getItem("chatHistory_" + sessionId),
-                    ) || [];
-
-                initializeConversations();
-                checkApiHealth();
-                setupEventListeners();
-                messageInput.focus();
-
-                // Load existing chat history if available
-                if (chatHistory.length > 0) {
-                    loadChatHistory();
-                }
-
-                // Initialize Zoho integration monitoring
-                initializeZohoIntegration();
-
-                // Initialize mode system
-                updateModeIndicator();
-
-                // Show initial mode message
-                if (chatHistory.length === 0) {
-                    setTimeout(() => {
-                        addMessage(
-                            "system",
-                            `💡 **Welcome to Your Personal AI Assistant!**
-
-        **Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}
-
-        **Quick Commands:**
-        • Type \`#zoho\` to switch to Zoho SalesIQ mode
-        • Type \`#direct\` to switch to Direct LLM mode
-        • Type \`#zoho Hello\` to switch mode and send message
-        • Type \`#help\` for more commands
-
-        Start chatting or use a command!`,
-                            false,
-                            false,
-                        );
-                    }, 1000);
-                }
-
-                // Auto-resize textarea
-                messageInput.addEventListener("input", function () {
-                    this.style.height = "auto";
-                    this.style.height = Math.min(this.scrollHeight, 120) + "px";
-                });
+            // Auto-resize textarea
+            messageInput.addEventListener("input", function () {
+                this.style.height = "auto";
+                this.style.height = Math.min(this.scrollHeight, 120) + "px";
             });
 
             function setupEventListeners() {
@@ -2319,12 +2310,12 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
 
                 if (sortedConversations.length === 0) {
                     conversationList.innerHTML = `
-                    <div class="empty-conversations">
-                        <i class="fas fa-comments"></i>
-                        <div>No conversations yet</div>
-                        <div style="font-size: 0.75rem; margin-top: 0.25rem; opacity: 0.7;">Start chatting to create your first conversation!</div>
-                    </div>
-                `;
+                                <div class="empty-conversations">
+                                    <i class="fas fa-comments"></i>
+                                    <div>No conversations yet</div>
+                                    <div style="font-size: 0.75rem; margin-top: 0.25rem; opacity: 0.7;">Start chatting to create your first conversation!</div>
+                                </div>
+                            `;
                     return;
                 }
 
@@ -2360,22 +2351,22 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                           : "fas fa-comment";
 
                 item.innerHTML = `
-                <div class="conversation-content">
-                    <div class="conversation-title">${conversation.title}</div>
-                    <div class="conversation-meta">
-                        <span><i class="${activityIcon}"></i> ${messageCount}</span>
-                        <span><i class="fas fa-clock"></i> ${timeAgo}</span>
-                    </div>
-                </div>
-                <div class="conversation-actions">
-                    <button class="conversation-action-btn" onclick="event.stopPropagation(); renameConversation('${conversation.id}')" title="Rename conversation">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="conversation-action-btn" onclick="event.stopPropagation(); deleteConversation('${conversation.id}')" title="Delete conversation">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </div>
-            `;
+                            <div class="conversation-content">
+                                <div class="conversation-title">${conversation.title}</div>
+                                <div class="conversation-meta">
+                                    <span><i class="${activityIcon}"></i> ${messageCount}</span>
+                                    <span><i class="fas fa-clock"></i> ${timeAgo}</span>
+                                </div>
+                            </div>
+                            <div class="conversation-actions">
+                                <button class="conversation-action-btn" onclick="event.stopPropagation(); renameConversation('${conversation.id}')" title="Rename conversation">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="conversation-action-btn" onclick="event.stopPropagation(); deleteConversation('${conversation.id}')" title="Delete conversation">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        `;
 
                 return item;
             }
@@ -2456,19 +2447,19 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 // Load chat history or show welcome message
                 if (chatHistory.length === 0) {
                     chatMessages.innerHTML = `
-                    <div class="welcome-message">
-                        <div class="welcome-content">
-                            <div class="ai-avatar">🤖</div>
-                            <h3>Welcome to Your Personal AI Assistant!</h3>
-                            <p>I'm ready to help you with a fresh conversation. What would you like to discuss?</p>
-                            <div class="welcome-features">
-                                <span class="feature-tag">🔒 Private</span>
-                                <span class="feature-tag">💾 Memory</span>
-                                <span class="feature-tag">⚡ Fast</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                                <div class="welcome-message">
+                                    <div class="welcome-content">
+                                        <div class="ai-avatar">🤖</div>
+                                        <h3>Welcome to Your Personal AI Assistant!</h3>
+                                        <p>I'm ready to help you with a fresh conversation. What would you like to discuss?</p>
+                                        <div class="welcome-features">
+                                            <span class="feature-tag">🔒 Private</span>
+                                            <span class="feature-tag">💾 Memory</span>
+                                            <span class="feature-tag">⚡ Fast</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
                 } else {
                     loadChatHistory();
                 }
@@ -2636,19 +2627,19 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
 
                     // Clear the chat display
                     chatMessages.innerHTML = `
-                    <div class="welcome-message">
-                        <div class="welcome-content">
-                            <div class="ai-avatar">🤖</div>
-                            <h3>Welcome to Your Personal AI Assistant!</h3>
-                            <p>I'm powered by Phi-3 Mini and running privately on your infrastructure. How can I help you today?</p>
-                            <div class="welcome-features">
-                                <span class="feature-tag">🔒 Private</span>
-                                <span class="feature-tag">💾 Memory</span>
-                                <span class="feature-tag">⚡ Fast</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                                <div class="welcome-message">
+                                    <div class="welcome-content">
+                                        <div class="ai-avatar">🤖</div>
+                                        <h3>Welcome to Your Personal AI Assistant!</h3>
+                                        <p>I'm powered by Phi-3 Mini and running privately on your infrastructure. How can I help you today?</p>
+                                        <div class="welcome-features">
+                                            <span class="feature-tag">🔒 Private</span>
+                                            <span class="feature-tag">💾 Memory</span>
+                                            <span class="feature-tag">⚡ Fast</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
 
                     sessionMessageCount = 0;
                     updateSessionStats();
@@ -2793,13 +2784,13 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                     "system",
                     `🔗 **Switched to Zoho SalesIQ Mode**
 
-Your messages will now be sent directly through the Zoho SalesIQ widget.
+            Your messages will now be sent directly through the Zoho SalesIQ widget.
 
-• Professional chat interface
-• Zoho widget features enabled
-• Direct integration with SalesIQ
+            • Professional chat interface
+            • Zoho widget features enabled
+            • Direct integration with SalesIQ
 
-Type \`#direct\` to switch back to direct LLM mode.`,
+            Type \`#direct\` to switch back to direct LLM mode.`,
                     false,
                     false,
                 );
@@ -2835,14 +2826,14 @@ Type \`#direct\` to switch back to direct LLM mode.`,
                     "system",
                     `🤖 **Switched to Direct LLM Mode**
 
-Your messages will now be sent directly to the Phi-3 Mini model.
+            Your messages will now be sent directly to the Phi-3 Mini model.
 
-• Direct AI processing
-• Faster responses
-• Local model control
-• Full conversation context
+            • Direct AI processing
+            • Faster responses
+            • Local model control
+            • Full conversation context
 
-Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
+            Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
                     false,
                     false,
                 );
@@ -2856,20 +2847,697 @@ Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
                     "system",
                     `💡 **Available Commands**
 
-**Mode Switching:**
-• \`#zoho\` or \`/zoho\` - Switch to Zoho SalesIQ mode
-• \`#direct\` or \`/direct\` - Switch to Direct LLM mode
-• \`#llm\` or \`/llm\` - Switch to Direct LLM mode
+            **Mode Switching:**
+            • \`#zoho\` or \`/zoho\` - Switch to Zoho SalesIQ mode
+            • \`#direct\` or \`/direct\` - Switch to Direct LLM mode
+            • \`#llm\` or \`/llm\` - Switch to Direct LLM mode
 
-**Smart Commands:**
-• \`#zoho Hello\` - Switch to Zoho mode and send "Hello"
-• \`#direct What is AI?\` - Switch to Direct mode and ask question
+            **Smart Commands:**
+            • \`#zoho Hello\` - Switch to Zoho mode and send "Hello"
+            • \`#direct What is AI?\` - Switch to Direct mode and ask question
 
-**Information:**
-• \`#help\` or \`/help\` - Show this help
-• \`#status\` or \`/status\` - Show system status
+            **Information:**
+            • \`#help\` or \`/help\` - Show this help
+            • \`#status\` or \`/status\` - Show system status
 
-**Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}`,
+            **LaTeX Support:**
+            • Inline: \\\\(x^2\\\\) renders as inline math
+            • Display: \\\\[\\\\frac{1}{2}\\\\] renders as display math
+            • Example: \\\\(d = \\\\frac{1}{p}\\\\) for parallax distance formula
+
+            **Input Limits:**
+            • Maximum: 1024 words per message
+            • Character limit: 8192 characters
+            • Real-time word/character counting enabled
+
+            **Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}`,
+                    false,
+                    false,
+                );
+            }
+
+            function setupEventListeners() {
+                // Send message on Enter (but allow Shift+Enter for new lines)
+                messageInput.addEventListener("keydown", function (e) {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+                });
+
+                // Prevent empty form submission
+                messageInput.addEventListener("keyup", function () {
+                    const hasText = this.value.trim().length > 0;
+                    sendButton.disabled = !hasText || isWaitingForResponse;
+                });
+            }
+
+            async function checkApiHealth() {
+                try {
+                    const response = await fetch(`${API_BASE}/health`);
+                    const data = await response.json();
+
+                    if (data.status === "healthy") {
+                        updateStatus("online", "AI Online");
+                        updateModelInfo(data.model);
+                    } else {
+                        updateStatus("offline", "AI Offline");
+                    }
+                } catch (error) {
+                    console.error("Health check failed:", error);
+                    updateStatus("offline", "Connection Error");
+                }
+            }
+
+            function updateStatus(status, text) {
+                statusDot.className = `status-dot ${status}`;
+                statusText.textContent = text;
+            }
+            function updateModelInfo(model) {
+                const modelElement = document.getElementById("aiModel");
+                if (modelElement && model) {
+                    modelElement.textContent = model;
+                }
+            }
+
+            // Conversation Management Functions
+            function initializeConversations() {
+                // Ensure current conversation exists in conversations list
+                if (!conversations[currentConversationId]) {
+                    const firstMessage =
+                        chatHistory.length > 0
+                            ? chatHistory[0].content
+                            : "New Conversation";
+                    conversations[currentConversationId] = {
+                        id: currentConversationId,
+                        title: generateConversationTitle(firstMessage),
+                        createdAt: sessionStartTime,
+                        lastActive: Date.now(),
+                        messageCount: chatHistory.length,
+                    };
+                    saveConversations();
+                }
+
+                loadConversationList();
+            }
+
+            function generateConversationTitle(firstMessage) {
+                if (!firstMessage || firstMessage.length === 0) {
+                    return "New Conversation";
+                }
+
+                // Take first 30 characters and clean it up
+                let title = firstMessage.substring(0, 30).trim();
+                if (firstMessage.length > 30) {
+                    title += "...";
+                }
+
+                // Remove line breaks and extra spaces
+                title = title.replace(/\s+/g, " ");
+
+                return title || "New Conversation";
+            }
+
+            function saveConversations() {
+                localStorage.setItem(
+                    "conversations",
+                    JSON.stringify(conversations),
+                );
+            }
+            function loadConversationList() {
+                const conversationList =
+                    document.getElementById("conversationList");
+                if (!conversationList) return;
+
+                // Sort conversations by last active time (newest first)
+                const sortedConversations = Object.values(conversations).sort(
+                    (a, b) => b.lastActive - a.lastActive,
+                );
+
+                conversationList.innerHTML = "";
+
+                if (sortedConversations.length === 0) {
+                    conversationList.innerHTML = `
+                                            <div class="empty-conversations">
+                                                <i class="fas fa-comments"></i>
+                                                <div>No conversations yet</div>
+                                                <div style="font-size: 0.75rem; margin-top: 0.25rem; opacity: 0.7;">Start chatting to create your first conversation!</div>
+                                            </div>
+                                        `;
+                    return;
+                }
+
+                sortedConversations.forEach((conversation, index) => {
+                    const conversationItem =
+                        createConversationItem(conversation);
+                    // Add staggered animation delay
+                    conversationItem.style.animationDelay = `${index * 0.1}s`;
+                    conversationList.appendChild(conversationItem);
+                });
+            }
+
+            function createConversationItem(conversation) {
+                const item = document.createElement("div");
+                item.className = `conversation-item ${conversation.id === currentConversationId ? "active" : ""}`;
+                item.onclick = () => switchToConversation(conversation.id);
+
+                const timeAgo = getTimeAgo(conversation.lastActive);
+                const messageCount = conversation.messageCount || 0;
+
+                // Create a visual indicator for conversation activity
+                const activityLevel =
+                    messageCount > 10
+                        ? "high"
+                        : messageCount > 5
+                          ? "medium"
+                          : "low";
+                const activityIcon =
+                    messageCount > 10
+                        ? "fas fa-fire"
+                        : messageCount > 5
+                          ? "fas fa-bolt"
+                          : "fas fa-comment";
+
+                item.innerHTML = `
+                                        <div class="conversation-content">
+                                            <div class="conversation-title">${conversation.title}</div>
+                                            <div class="conversation-meta">
+                                                <span><i class="${activityIcon}"></i> ${messageCount}</span>
+                                                <span><i class="fas fa-clock"></i> ${timeAgo}</span>
+                                            </div>
+                                        </div>
+                                        <div class="conversation-actions">
+                                            <button class="conversation-action-btn" onclick="event.stopPropagation(); renameConversation('${conversation.id}')" title="Rename conversation">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="conversation-action-btn" onclick="event.stopPropagation(); deleteConversation('${conversation.id}')" title="Delete conversation">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    `;
+
+                return item;
+            }
+
+            function getTimeAgo(timestamp) {
+                const now = Date.now();
+                const diff = now - parseInt(timestamp);
+
+                const minutes = Math.floor(diff / (1000 * 60));
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+                if (minutes < 1) return "Just now";
+                if (minutes < 60) return `${minutes}m ago`;
+                if (hours < 24) return `${hours}h ago`;
+                if (days === 1) return "Yesterday";
+                if (days < 7) return `${days}d ago`;
+
+                return new Date(parseInt(timestamp)).toLocaleDateString();
+            }
+
+            function createNewConversation() {
+                // Save current conversation state
+                updateCurrentConversation();
+
+                // Generate new conversation ID
+                const newConversationId =
+                    "web_" +
+                    Date.now() +
+                    "_" +
+                    Math.random().toString(36).substr(2, 9);
+
+                // Create new conversation
+                conversations[newConversationId] = {
+                    id: newConversationId,
+                    title: "New Conversation",
+                    createdAt: Date.now(),
+                    lastActive: Date.now(),
+                    messageCount: 0,
+                };
+
+                saveConversations();
+                switchToConversation(newConversationId);
+            }
+            function switchToConversation(conversationId) {
+                if (conversationId === currentConversationId) return;
+
+                // Force save current conversation state before switching
+                if (currentConversationId && chatHistory.length > 0) {
+                    saveChatHistory();
+                    updateCurrentConversation();
+                }
+
+                // Switch to new conversation
+                currentConversationId = conversationId;
+                sessionId = conversationId;
+
+                // Update localStorage
+                localStorage.setItem("chatSessionId", sessionId);
+
+                // Load conversation data
+                chatHistory =
+                    JSON.parse(
+                        localStorage.getItem("chatHistory_" + sessionId),
+                    ) || [];
+                sessionStartTime =
+                    localStorage.getItem("sessionStartTime_" + sessionId) ||
+                    conversations[conversationId].createdAt;
+
+                // Reset session message count based on loaded history
+                sessionMessageCount = chatHistory.filter(
+                    (entry) => entry.role === "user",
+                ).length;
+
+                // Clear chat display first
+                chatMessages.innerHTML = "";
+
+                // Load chat history or show welcome message
+                if (chatHistory.length === 0) {
+                    chatMessages.innerHTML = `
+                                            <div class="welcome-message">
+                                                <div class="welcome-content">
+                                                    <div class="ai-avatar">🤖</div>
+                                                    <h3>Welcome to Your Personal AI Assistant!</h3>
+                                                    <p>I'm ready to help you with a fresh conversation. What would you like to discuss?</p>
+                                                    <div class="welcome-features">
+                                                        <span class="feature-tag">🔒 Private</span>
+                                                        <span class="feature-tag">💾 Memory</span>
+                                                        <span class="feature-tag">⚡ Fast</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `;
+                } else {
+                    loadChatHistory();
+                }
+
+                // Update UI
+                loadConversationList();
+                updateSessionStats();
+
+                // Update conversation last active time
+                conversations[conversationId].lastActive = Date.now();
+                saveConversations();
+            }
+            function updateCurrentConversation() {
+                if (!conversations[currentConversationId]) return;
+
+                // Update conversation metadata
+                conversations[currentConversationId].messageCount =
+                    chatHistory.length;
+                conversations[currentConversationId].lastActive = Date.now();
+
+                // Update title if it's still default and we have messages
+                if (
+                    conversations[currentConversationId].title ===
+                        "New Conversation" &&
+                    chatHistory.length > 0
+                ) {
+                    const firstUserMessage = chatHistory.find(
+                        (msg) => msg.role === "user",
+                    );
+                    if (firstUserMessage) {
+                        conversations[currentConversationId].title =
+                            generateConversationTitle(firstUserMessage.content);
+                    }
+                }
+
+                // Force save conversations
+                saveConversations();
+
+                // Update the conversation list display
+                loadConversationList();
+            }
+
+            function renameConversation(conversationId) {
+                const conversation = conversations[conversationId];
+                if (!conversation) return;
+
+                const newTitle = prompt(
+                    "Enter new conversation name:",
+                    conversation.title,
+                );
+                if (newTitle && newTitle.trim()) {
+                    conversation.title = newTitle.trim();
+                    saveConversations();
+                    loadConversationList();
+                }
+            }
+
+            function deleteConversation(conversationId) {
+                if (Object.keys(conversations).length <= 1) {
+                    alert("Cannot delete the last conversation.");
+                    return;
+                }
+
+                const conversation = conversations[conversationId];
+                if (!conversation) return;
+
+                if (
+                    confirm(
+                        `Delete conversation "${conversation.title}"? This cannot be undone.`,
+                    )
+                ) {
+                    // Remove from localStorage
+                    localStorage.removeItem("chatHistory_" + conversationId);
+                    localStorage.removeItem(
+                        "sessionStartTime_" + conversationId,
+                    );
+
+                    // Remove from conversations
+                    delete conversations[conversationId];
+                    saveConversations();
+
+                    // If deleting current conversation, switch to another
+                    if (conversationId === currentConversationId) {
+                        const remainingConversations =
+                            Object.keys(conversations);
+                        if (remainingConversations.length > 0) {
+                            switchToConversation(remainingConversations[0]);
+                        }
+                    } else {
+                        loadConversationList();
+                    }
+                }
+            }
+
+            // Chat History Management
+            function saveChatHistory() {
+                localStorage.setItem(
+                    "chatHistory_" + sessionId,
+                    JSON.stringify(chatHistory),
+                );
+                console.log(
+                    `💾 Saved chat history for ${sessionId}: ${chatHistory.length} messages`,
+                );
+            }
+
+            function addToChatHistory(role, content) {
+                const entry = {
+                    role: role,
+                    content: content,
+                    timestamp: Date.now(),
+                    formatted_time: new Date().toLocaleTimeString(),
+                };
+
+                chatHistory.push(entry);
+
+                // Keep only last 50 messages for memory conservation
+                if (chatHistory.length > 50) {
+                    chatHistory = chatHistory.slice(-50);
+                }
+
+                // Force save immediately
+                saveChatHistory();
+
+                // Update conversation metadata and force save
+                updateCurrentConversation();
+
+                // Debug logging
+                console.log(
+                    `💾 Saved ${role} message to conversation ${currentConversationId}:`,
+                    content.substring(0, 50) + "...",
+                );
+            }
+            function loadChatHistory() {
+                if (chatHistory.length === 0) return;
+
+                console.log(
+                    `📖 Loading chat history for ${sessionId}: ${chatHistory.length} messages`,
+                );
+
+                // Restore messages from history
+                chatHistory.forEach((entry, index) => {
+                    console.log(
+                        `  ${index + 1}. ${entry.role}: ${entry.content.substring(0, 50)}...`,
+                    );
+                    addMessage(entry.role, entry.content, false, false); // Don't save to history again
+                });
+
+                sessionMessageCount = chatHistory.filter(
+                    (entry) => entry.role === "user",
+                ).length;
+                updateSessionStats();
+
+                // Scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            function clearChatHistory() {
+                if (
+                    confirm(
+                        "Are you sure you want to clear the chat history? This cannot be undone.",
+                    )
+                ) {
+                    chatHistory = [];
+                    localStorage.removeItem("chatHistory_" + sessionId);
+
+                    // Clear the chat display
+                    chatMessages.innerHTML = `
+                                            <div class="welcome-message">
+                                                <div class="welcome-content">
+                                                    <div class="ai-avatar">🤖</div>
+                                                    <h3>Welcome to Your Personal AI Assistant!</h3>
+                                                    <p>I'm powered by Phi-3 Mini and running privately on your infrastructure. How can I help you today?</p>
+                                                    <div class="welcome-features">
+                                                        <span class="feature-tag">🔒 Private</span>
+                                                        <span class="feature-tag">💾 Memory</span>
+                                                        <span class="feature-tag">⚡ Fast</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `;
+
+                    sessionMessageCount = 0;
+                    updateSessionStats();
+                }
+            }
+
+            function newChatSession() {
+                if (
+                    confirm(
+                        "Start a new chat session? Current conversation will be saved but a new session will begin.",
+                    )
+                ) {
+                    createNewConversation();
+                }
+            }
+
+            async function sendMessage() {
+                const message = messageInput.value.trim();
+                if (!message || isWaitingForResponse) return;
+
+                // Check for special commands
+                if (handleSpecialCommands(message)) {
+                    return; // Command was handled, don't process as regular message
+                }
+
+                // Clear input and update UI
+                messageInput.value = "";
+                messageInput.style.height = "auto";
+                isWaitingForResponse = true;
+                sendButton.disabled = true;
+
+                // Remove welcome message if present
+                const welcomeMessage =
+                    chatMessages.querySelector(".welcome-message");
+                if (welcomeMessage) {
+                    welcomeMessage.remove();
+                }
+
+                // Add user message
+                addMessage("user", message);
+                sessionMessageCount++;
+                updateSessionStats();
+
+                // Route message based on current mode
+                console.log("📤 Routing message via mode:", currentMode);
+                if (currentMode === "zoho") {
+                    console.log("🔗 Sending to Zoho SalesIQ...");
+                    await sendToZohoSalesIQ(message);
+                } else {
+                    console.log("🤖 Sending to Direct LLM...");
+                    await sendToDirectLLM(message);
+                }
+            }
+
+            function handleSpecialCommands(message) {
+                const messageText = message.toLowerCase().trim();
+                const firstWord = messageText.split(" ")[0];
+
+                console.log(
+                    "🔍 Checking command:",
+                    firstWord,
+                    "in message:",
+                    message,
+                );
+
+                // Check if the first word is a command
+                if (firstWord === "#zoho" || firstWord === "/zoho") {
+                    console.log("✅ Detected Zoho command");
+                    // Clear input and handle command
+                    messageInput.value = "";
+                    messageInput.style.height = "auto";
+                    switchToZohoMode();
+
+                    // If there's additional text after the command, process it in Zoho mode
+                    const remainingText = message
+                        .trim()
+                        .substring(firstWord.length)
+                        .trim();
+                    if (remainingText.length > 0) {
+                        console.log(
+                            "📝 Additional text found, will send:",
+                            remainingText,
+                        );
+                        setTimeout(() => {
+                            messageInput.value = remainingText;
+                            sendMessage();
+                        }, 500); // Small delay to let mode switch complete
+                    }
+                    return true;
+                } else if (
+                    firstWord === "#direct" ||
+                    firstWord === "/direct" ||
+                    firstWord === "#llm" ||
+                    firstWord === "/llm"
+                ) {
+                    console.log("✅ Detected Direct mode command");
+                    messageInput.value = "";
+                    messageInput.style.height = "auto";
+                    switchToDirectMode();
+
+                    // If there's additional text after the command, process it in direct mode
+                    const remainingText = message
+                        .trim()
+                        .substring(firstWord.length)
+                        .trim();
+                    if (remainingText.length > 0) {
+                        console.log(
+                            "📝 Additional text found, will send:",
+                            remainingText,
+                        );
+                        setTimeout(() => {
+                            messageInput.value = remainingText;
+                            sendMessage();
+                        }, 500);
+                    }
+                    return true;
+                } else if (firstWord === "#help" || firstWord === "/help") {
+                    console.log("✅ Detected Help command");
+                    messageInput.value = "";
+                    messageInput.style.height = "auto";
+                    showCommandHelp();
+                    return true;
+                } else if (firstWord === "#status" || firstWord === "/status") {
+                    console.log("✅ Detected Status command");
+                    messageInput.value = "";
+                    messageInput.style.height = "auto";
+                    showSystemStatus();
+                    return true;
+                }
+
+                console.log("❌ No command detected");
+                return false; // Not a special command
+            }
+
+            function switchToZohoMode() {
+                console.log("🔗 Switching to Zoho SalesIQ mode...");
+
+                currentMode = "zoho";
+                localStorage.setItem("chatMode", "zoho");
+
+                addMessage(
+                    "system",
+                    `🔗 **Switched to Zoho SalesIQ Mode**
+
+                        Your messages will now be sent directly through the Zoho SalesIQ widget.
+
+                        • Professional chat interface
+                        • Zoho widget features enabled
+                        • Direct integration with SalesIQ
+
+                        Type \`#direct\` to switch back to direct LLM mode.`,
+                    false,
+                    false,
+                );
+
+                updateModeIndicator();
+                console.log("✅ Mode switched to Zoho SalesIQ");
+
+                // Try to open Zoho widget if available
+                if (
+                    typeof window.$zoho !== "undefined" &&
+                    window.$zoho.salesiq
+                ) {
+                    try {
+                        window.$zoho.salesiq.chat.start();
+                        console.log("✅ Zoho widget activated");
+                    } catch (e) {
+                        console.log(
+                            "⚠️ Zoho widget not fully loaded yet:",
+                            e.message,
+                        );
+                    }
+                } else {
+                    console.log("ℹ️ Zoho widget not detected");
+                }
+            }
+
+            function switchToDirectMode() {
+                console.log("🤖 Switching to Direct LLM mode...");
+                currentMode = "direct";
+                localStorage.setItem("chatMode", "direct");
+
+                addMessage(
+                    "system",
+                    `🤖 **Switched to Direct LLM Mode**
+
+                        Your messages will now be sent directly to the Phi-3 Mini model.
+
+                        • Direct AI processing
+                        • Faster responses
+                        • Local model control
+                        • Full conversation context
+
+                        Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
+                    false,
+                    false,
+                );
+
+                updateModeIndicator();
+                console.log("✅ Mode switched to Direct LLM");
+            }
+
+            function showCommandHelp() {
+                addMessage(
+                    "system",
+                    `💡 **Available Commands**
+
+                                            **Mode Switching:**
+                                            • \`#zoho\` or \`/zoho\` - Switch to Zoho SalesIQ mode
+                                            • \`#direct\` or \`/direct\` - Switch to Direct LLM mode
+                                            • \`#llm\` or \`/llm\` - Switch to Direct LLM mode
+
+                                            **Smart Commands:**
+                                            • \`#zoho Hello\` - Switch to Zoho mode and send "Hello"
+                                            • \`#direct What is AI?\` - Switch to Direct mode and ask question
+
+                                            **Information:**
+                                            • \`#help\` or \`/help\` - Show this help
+                                            • \`#status\` or \`/status\` - Show system status
+
+                                            **LaTeX Support:**
+                                            • Inline: \\(x^2\\) or $x^2$
+                                            • Display: \\[\\frac{1}{2}\\] or $$\\frac{1}{2}$$
+                                            • Example: \\(d = \\frac{1}{p}\\) renders as mathematical formula
+
+                                            **Input Limits:**
+                                            • Maximum: 1024 words per message
+                                            • Character limit: 8192 characters
+
+                                            **Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}`,
                     false,
                     false,
                 );
@@ -2886,12 +3554,12 @@ Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
                     "system",
                     `📊 **System Status**
 
-**Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}
-**API Status:** ${apiStatus}
-**Zoho Widget:** ${zohoStatus}
-**Session:** ${sessionId.substring(0, 12)}...
-**Messages:** ${chatHistory.length}/50
-**Uptime:** ${Math.floor((Date.now() - sessionStartTime) / 60000)} minutes`,
+                        **Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}
+                        **API Status:** ${apiStatus}
+                        **Zoho Widget:** ${zohoStatus}
+                        **Session:** ${sessionId.substring(0, 12)}...
+                        **Messages:** ${chatHistory.length}/50
+                        **Uptime:** ${Math.floor((Date.now() - sessionStartTime) / 60000)} minutes`,
                     false,
                     false,
                 );
@@ -2909,17 +3577,17 @@ Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
                     modeIndicator = document.createElement("div");
                     modeIndicator.id = "modeIndicator";
                     modeIndicator.style.cssText = `
-                        display: flex;
-                        align-items: center;
-                        gap: 0.5rem;
-                        padding: 0.5rem 1rem;
-                        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
-                        border-radius: 20px;
-                        font-size: 0.875rem;
-                        font-weight: 500;
-                        color: var(--primary-color);
-                        border: 1px solid rgba(99, 102, 241, 0.2);
-                    `;
+                                                display: flex;
+                                                align-items: center;
+                                                gap: 0.5rem;
+                                                padding: 0.5rem 1rem;
+                                                background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+                                                border-radius: 20px;
+                                                font-size: 0.875rem;
+                                                font-weight: 500;
+                                                color: var(--primary-color);
+                                                border: 1px solid rgba(99, 102, 241, 0.2);
+                                            `;
 
                     const headerContent =
                         document.querySelector(".header-content");
@@ -3095,6 +3763,22 @@ Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
                                             currentContentDiv.innerHTML =
                                                 formattedText +
                                                 '<span class="typing-cursor">|</span>';
+
+                                            // Trigger MathJax for streaming content
+                                            if (
+                                                window.MathJax &&
+                                                window.MathJax.typesetPromise
+                                            ) {
+                                                window.MathJax.typesetPromise([
+                                                    currentContentDiv,
+                                                ]).catch((err) =>
+                                                    console.log(
+                                                        "MathJax typeset failed: " +
+                                                            err.message,
+                                                    ),
+                                                );
+                                            }
+
                                             chatMessages.scrollTop =
                                                 chatMessages.scrollHeight;
                                         }
@@ -3113,6 +3797,21 @@ Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
                                                     ".typing-cursor",
                                                 );
                                             if (cursor) cursor.remove();
+
+                                            // Final MathJax rendering
+                                            if (
+                                                window.MathJax &&
+                                                window.MathJax.typesetPromise
+                                            ) {
+                                                window.MathJax.typesetPromise([
+                                                    currentContentDiv,
+                                                ]).catch((err) =>
+                                                    console.log(
+                                                        "MathJax typeset failed: " +
+                                                            err.message,
+                                                    ),
+                                                );
+                                            }
                                         }
 
                                         // Update stats
@@ -3193,6 +3892,21 @@ Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
                         addMessage("assistant", data.response);
                         sessionMessageCount++;
                         updateStats();
+
+                        // Trigger MathJax for fallback responses
+                        setTimeout(() => {
+                            if (
+                                window.MathJax &&
+                                window.MathJax.typesetPromise
+                            ) {
+                                window.MathJax.typesetPromise().catch((err) =>
+                                    console.log(
+                                        "MathJax typeset failed: " +
+                                            err.message,
+                                    ),
+                                );
+                            }
+                        }, 100);
                     } else {
                         addMessage(
                             "assistant",
@@ -3245,16 +3959,121 @@ Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
                     addToChatHistory(sender, text);
                 }
 
+                // Trigger MathJax rendering for LaTeX formulas
+                setTimeout(() => {
+                    if (window.MathJax && window.MathJax.typesetPromise) {
+                        window.MathJax.typesetPromise([messageDiv]).catch(
+                            (err) =>
+                                console.log(
+                                    "MathJax typeset failed: " + err.message,
+                                ),
+                        );
+                    }
+                }, 100);
+
                 // Scroll to bottom
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
 
             function formatMessage(text) {
                 // Basic formatting: convert **bold** and *italic*
-                return text
+                let formatted = text
                     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
                     .replace(/\*(.*?)\*/g, "<em>$1</em>")
                     .replace(/\n/g, "<br>");
+
+                // Trigger MathJax rendering after DOM update
+                setTimeout(() => {
+                    if (window.MathJax && window.MathJax.typesetPromise) {
+                        window.MathJax.typesetPromise().catch((err) =>
+                            console.log(
+                                "MathJax typeset failed: " + err.message,
+                            ),
+                        );
+                    }
+                }, 100);
+
+                return formatted;
+            }
+
+            function updateInputInfo() {
+                const inputInfo = document.getElementById("inputInfo");
+                if (!inputInfo) return;
+
+                const text = messageInput.value;
+                const charCount = text.length;
+                const wordCount =
+                    text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
+                const maxChars = 8192;
+                const maxWords = 1024;
+
+                // Update display
+                inputInfo.textContent = `${wordCount} words, ${charCount} chars`;
+
+                // Color coding based on limits
+                if (wordCount > maxWords || charCount > maxChars) {
+                    inputInfo.style.color = "var(--error-color)";
+                    inputInfo.style.fontWeight = "bold";
+                } else if (
+                    wordCount > maxWords * 0.8 ||
+                    charCount > maxChars * 0.8
+                ) {
+                    inputInfo.style.color = "var(--warning-color)";
+                    inputInfo.style.fontWeight = "normal";
+                } else {
+                    inputInfo.style.color = "var(--text-secondary)";
+                    inputInfo.style.fontWeight = "normal";
+                }
+            }
+
+            function validateInput(text) {
+                const charCount = text.length;
+                const wordCount =
+                    text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
+                const maxChars = 8192;
+                const maxWords = 1024;
+
+                if (wordCount > maxWords) {
+                    showInputError(
+                        `Message too long: ${wordCount} words (max: ${maxWords})`,
+                    );
+                    return false;
+                }
+
+                if (charCount > maxChars) {
+                    showInputError(
+                        `Message too long: ${charCount} characters (max: ${maxChars})`,
+                    );
+                    return false;
+                }
+
+                return true;
+            }
+
+            function showInputError(message) {
+                // Create temporary error message
+                const errorDiv = document.createElement("div");
+                errorDiv.style.cssText = `
+                                            position: fixed;
+                                            top: 20px;
+                                            right: 20px;
+                                            background: var(--error-color);
+                                            color: white;
+                                            padding: 12px 16px;
+                                            border-radius: 8px;
+                                            font-size: 14px;
+                                            z-index: 10000;
+                                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                                        `;
+                errorDiv.textContent = message;
+                document.body.appendChild(errorDiv);
+
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.parentNode.removeChild(errorDiv);
+                    }
+                }, 3000);
             }
 
             function showTypingIndicator(customText = null) {
@@ -3356,12 +4175,12 @@ Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
                     )
                 ) {
                     chatMessages.innerHTML = `
-                    <div class="welcome-message">
-                        <i class="fas fa-comments"></i>
-                        <h3>Chat cleared! Ready for a new conversation.</h3>
-                        <p>Start a conversation by typing a message below.</p>
-                    </div>
-                `;
+                                            <div class="welcome-message">
+                                                <i class="fas fa-comments"></i>
+                                                <h3>Chat cleared! Ready for a new conversation.</h3>
+                                                <p>Start a conversation by typing a message below.</p>
+                                            </div>
+                                        `;
 
                     // Reset session
                     sessionId =
@@ -3417,22 +4236,22 @@ Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
                 );
 
                 const info = `
-Session Information:
-━━━━━━━━━━━━━━━━━━━━
+                        Session Information:
+                        ━━━━━━━━━━━━━━━━━━━━
 
-📋 Session ID: ${sessionId}
-⏰ Duration: ${hours}h ${minutes}m
-💬 Messages: ${chatHistory.length}/50
-📊 User Messages: ${chatHistory.filter((m) => m.role === "user").length}
-🤖 AI Responses: ${chatHistory.filter((m) => m.role === "assistant").length}
-🕒 Started: ${new Date(parseInt(sessionStartTime)).toLocaleString()}
-⚡ Last Response: ${lastResponseTime}ms
+                        📋 Session ID: ${sessionId}
+                        ⏰ Duration: ${hours}h ${minutes}m
+                        💬 Messages: ${chatHistory.length}/50
+                        📊 User Messages: ${chatHistory.filter((m) => m.role === "user").length}
+                        🤖 AI Responses: ${chatHistory.filter((m) => m.role === "assistant").length}
+                        🕒 Started: ${new Date(parseInt(sessionStartTime)).toLocaleString()}
+                        ⚡ Last Response: ${lastResponseTime}ms
 
-🧠 Memory Management:
-• Automatically keeps last 50 messages
-• Older messages are archived locally
-• Session persists across browser sessions
-            `.trim();
+                        🧠 Memory Management:
+                        • Automatically keeps last 50 messages
+                        • Older messages are archived locally
+                        • Session persists across browser sessions
+                                    `.trim();
 
                 alert(info);
             }
@@ -3510,9 +4329,10 @@ Session Information:
                 // Initialize Zoho SalesIQ integration monitoring
                 initializeZohoIntegration();
 
-                // Focus on input
+                // Focus on input and initialize input info
                 if (messageInput) {
                     messageInput.focus();
+                    updateInputInfo();
                 }
 
                 console.log("✅ App initialized successfully");
@@ -3533,6 +4353,36 @@ Session Information:
                     console.log("🔄 Auto-saved conversation state");
                 }
             }, 15000); // Every 15 seconds
+
+            // Enhanced input event listener for word counting and validation
+            if (messageInput) {
+                messageInput.addEventListener("input", function () {
+                    this.style.height = "auto";
+                    this.style.height = Math.min(this.scrollHeight, 120) + "px";
+                    updateInputInfo();
+                });
+
+                messageInput.addEventListener("keyup", function () {
+                    const hasText = this.value.trim().length > 0;
+                    sendButton.disabled = !hasText || isWaitingForResponse;
+                    updateInputInfo();
+                });
+            }
+
+            // Enhanced sendMessage wrapper with validation
+            const originalSendMessage = sendMessage;
+            window.sendMessage = async function () {
+                const message = messageInput.value.trim();
+                if (!message || isWaitingForResponse) return;
+
+                // Validate input length
+                if (!validateInput(message)) {
+                    return; // Validation failed, don't send
+                }
+
+                // Call original sendMessage function
+                return await originalSendMessage();
+            };
 
             // Save on page unload
             window.addEventListener("beforeunload", function () {
