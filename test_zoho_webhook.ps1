@@ -10,7 +10,7 @@ Write-Host "🧪 Testing Zoho SalesIQ Webhook Integration" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
 # Configuration
-$ApiPort = "5000"
+$ApiPort = "80"
 $WebhookEndpoint = "/webhook/zoho"
 $ApiUrl = "http://${VMIpAddress}:${ApiPort}"
 $WebhookUrl = "${ApiUrl}${WebhookEndpoint}"

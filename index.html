@@ -1915,13 +1915,69 @@
         <!-- Zoho SalesIQ Chat Widget Integration -->
         <script>
             window.$zoho = window.$zoho || {};
-            $zoho.salesiq = $zoho.salesiq || { ready: function () {} };
+            $zoho.salesiq = $zoho.salesiq || {
+                ready: function () {
+                    console.log("🔗 Zoho SalesIQ widget loaded successfully");
+                    // Update integration status
+                    setTimeout(checkZohoIntegration, 1000);
+                },
+            };
         </script>
         <script
             id="zsiqscript"
             src="https://salesiq.zohopublic.com/widget?wc=siq6cc792edbb3d3978c24391c98f41f9fbe11a88aae55bbe42061308737dc62af5"
             defer
+            onload="console.log('Zoho script loaded')"
+            onerror="console.warn('Failed to load Zoho widget')"
         ></script>
+
+        <!-- Fallback Zoho Widget Loader -->
+        <script>
+            // Fallback widget loader with retry mechanism
+            function loadZohoWidgetFallback() {
+                if (
+                    typeof window.$zoho === "undefined" ||
+                    !window.$zoho.salesiq
+                ) {
+                    console.log("🔄 Loading Zoho widget fallback...");
+
+                    // Create fallback script element
+                    const fallbackScript = document.createElement("script");
+                    fallbackScript.type = "text/javascript";
+                    fallbackScript.async = true;
+                    fallbackScript.src =
+                        "https://salesiq.zohopublic.com/widget?wc=siq6cc792edbb3d3978c24391c98f41f9fbe11a88aae55bbe42061308737dc62af5";
+
+                    fallbackScript.onload = function () {
+                        console.log("✅ Zoho widget fallback loaded");
+                        setTimeout(checkZohoIntegration, 2000);
+                    };
+
+                    fallbackScript.onerror = function () {
+                        console.warn("❌ Zoho widget fallback failed");
+                    };
+
+                    document.head.appendChild(fallbackScript);
+
+                    // Create widget container if it doesn't exist
+                    if (!document.getElementById("zsiqwidget")) {
+                        const widgetDiv = document.createElement("div");
+                        widgetDiv.id = "zsiqwidget";
+                        document.body.appendChild(widgetDiv);
+                    }
+                }
+            }
+
+            // Try fallback after 5 seconds if main script fails
+            setTimeout(function () {
+                if (
+                    typeof window.$zoho === "undefined" ||
+                    !window.$zoho.salesiq
+                ) {
+                    loadZohoWidgetFallback();
+                }
+            }, 5000);
+        </script>
 
         <!-- Enhanced Zoho SalesIQ Integration with Status Monitoring -->
         <script>
@@ -2130,6 +2186,10 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 JSON.parse(localStorage.getItem("conversations")) || {};
             let currentConversationId = sessionId;
 
+            // Dual Mode System - Direct LLM vs Zoho SalesIQ
+            let currentMode = localStorage.getItem("chatMode") || "direct"; // "direct" or "zoho"
+            let zohoWidget = null;
+
             // Save session ID to localStorage
             localStorage.setItem("chatSessionId", sessionId);
             localStorage.setItem(
@@ -2165,6 +2225,30 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
 
                 // Initialize Zoho integration monitoring
                 initializeZohoIntegration();
+
+                // Initialize mode system
+                updateModeIndicator();
+
+                // Show initial mode message
+                if (chatHistory.length === 0) {
+                    setTimeout(() => {
+                        addMessage(
+                            "system",
+                            `💡 **Welcome to Your Personal AI Assistant!**
+
+**Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}
+
+**Quick Commands:**
+• Type \`#zoho\` to switch to Zoho SalesIQ mode
+• Type \`#direct\` to switch to Direct LLM mode
+• Type \`#help\` for more commands
+
+Start chatting or use a command!`,
+                            false,
+                            false,
+                        );
+                    }, 1000);
+                }
 
                 // Auto-resize textarea
                 messageInput.addEventListener("input", function () {
@@ -2625,6 +2709,11 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 const message = messageInput.value.trim();
                 if (!message || isWaitingForResponse) return;
 
+                // Check for special commands
+                if (handleSpecialCommands(message)) {
+                    return; // Command was handled, don't process as regular message
+                }
+
                 // Clear input and update UI
                 messageInput.value = "";
                 messageInput.style.height = "auto";
@@ -2643,12 +2732,185 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 sessionMessageCount++;
                 updateSessionStats();
 
+                // Route message based on current mode
+                if (currentMode === "zoho") {
+                    await sendToZohoSalesIQ(message);
+                } else {
+                    await sendToDirectLLM(message);
+                }
+            }
+
+            function handleSpecialCommands(message) {
+                const command = message.toLowerCase().trim();
+
+                // Clear input first
+                messageInput.value = "";
+                messageInput.style.height = "auto";
+
+                if (command === "#zoho" || command === "/zoho") {
+                    switchToZohoMode();
+                    return true;
+                } else if (
+                    command === "#direct" ||
+                    command === "/direct" ||
+                    command === "#llm" ||
+                    command === "/llm"
+                ) {
+                    switchToDirectMode();
+                    return true;
+                } else if (command === "#help" || command === "/help") {
+                    showCommandHelp();
+                    return true;
+                } else if (command === "#status" || command === "/status") {
+                    showSystemStatus();
+                    return true;
+                }
+
+                return false; // Not a special command
+            }
+
+            function switchToZohoMode() {
+                currentMode = "zoho";
+                localStorage.setItem("chatMode", "zoho");
+
+                addMessage(
+                    "system",
+                    `🔗 **Switched to Zoho SalesIQ Mode**
+
+Your messages will now be sent through Zoho SalesIQ integration.
+
+• Professional chat interface
+• Zoho widget features enabled
+• Messages routed through SalesIQ webhooks
+
+Type \`#direct\` to switch back to direct LLM mode.`,
+                    false,
+                    false,
+                );
+
+                updateModeIndicator();
+
+                // Try to open Zoho widget if available
+                if (
+                    typeof window.$zoho !== "undefined" &&
+                    window.$zoho.salesiq
+                ) {
+                    try {
+                        window.$zoho.salesiq.chat.start();
+                    } catch (e) {
+                        console.log("Zoho widget not fully loaded yet");
+                    }
+                }
+            }
+
+            function switchToDirectMode() {
+                currentMode = "direct";
+                localStorage.setItem("chatMode", "direct");
+
+                addMessage(
+                    "system",
+                    `🤖 **Switched to Direct LLM Mode**
+
+Your messages will now be sent directly to the Phi-3 Mini model.
+
+• Direct AI processing
+• Faster responses
+• Local model control
+• Full conversation context
+
+Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
+                    false,
+                    false,
+                );
+
+                updateModeIndicator();
+            }
+
+            function showCommandHelp() {
+                addMessage(
+                    "system",
+                    `💡 **Available Commands**
+
+**Mode Switching:**
+• \`#zoho\` or \`/zoho\` - Switch to Zoho SalesIQ mode
+• \`#direct\` or \`/direct\` - Switch to Direct LLM mode
+• \`#llm\` or \`/llm\` - Switch to Direct LLM mode
+
+**Information:**
+• \`#help\` or \`/help\` - Show this help
+• \`#status\` or \`/status\` - Show system status
+
+**Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}`,
+                    false,
+                    false,
+                );
+            }
+
+            function showSystemStatus() {
+                const zohoStatus =
+                    typeof window.$zoho !== "undefined" && window.$zoho.salesiq
+                        ? "✅ Active"
+                        : "❌ Not Loaded";
+                const apiStatus = statusText.textContent;
+
+                addMessage(
+                    "system",
+                    `📊 **System Status**
+
+**Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}
+**API Status:** ${apiStatus}
+**Zoho Widget:** ${zohoStatus}
+**Session:** ${sessionId.substring(0, 12)}...
+**Messages:** ${chatHistory.length}/50
+**Uptime:** ${Math.floor((Date.now() - sessionStartTime) / 60000)} minutes
+
+**Integration Status:**
+${document.getElementById("integrationStatus").textContent}`,
+                    false,
+                    false,
+                );
+            }
+
+            function updateModeIndicator() {
+                // Update status indicator to show current mode
+                const modeText =
+                    currentMode === "zoho" ? "Zoho Mode" : "Direct Mode";
+                const modeIcon = currentMode === "zoho" ? "🔗" : "🤖";
+
+                // Add mode indicator to header if not exists
+                let modeIndicator = document.getElementById("modeIndicator");
+                if (!modeIndicator) {
+                    modeIndicator = document.createElement("div");
+                    modeIndicator.id = "modeIndicator";
+                    modeIndicator.style.cssText = `
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        padding: 0.5rem 1rem;
+                        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+                        border-radius: 20px;
+                        font-size: 0.875rem;
+                        font-weight: 500;
+                        color: var(--primary-color);
+                        border: 1px solid rgba(99, 102, 241, 0.2);
+                    `;
+
+                    const headerContent =
+                        document.querySelector(".header-content");
+                    if (headerContent) {
+                        headerContent.appendChild(modeIndicator);
+                    }
+                }
+
+                modeIndicator.innerHTML = `${modeIcon} ${modeText}`;
+            }
+
+            async function sendToDirectLLM(message) {
                 // Show typing indicator
                 showTypingIndicator();
 
                 try {
                     const startTime = Date.now();
-
                     // Try streaming first for better UX
                     await sendMessageWithStreaming(message, startTime);
                 } catch (error) {
@@ -2657,6 +2919,64 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                     addMessage(
                         "assistant",
                         `Connection error: ${error.message}. Please check if the API server is running.`,
+                        true,
+                    );
+                } finally {
+                    isWaitingForResponse = false;
+                    sendButton.disabled = false;
+                    messageInput.focus();
+                }
+            }
+
+            async function sendToZohoSalesIQ(message) {
+                // Show different typing indicator for Zoho mode
+                showTypingIndicator("Sending via Zoho SalesIQ...");
+
+                try {
+                    // Send message through webhook to simulate Zoho integration
+                    const response = await fetch(`${API_BASE}/webhook/zoho`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            event_type: "conversation.visitors.replied",
+                            message: { text: message },
+                            visitor: { id: sessionId, name: "Web User" },
+                            conversation: { id: currentConversationId },
+                        }),
+                    });
+
+                    hideTypingIndicator();
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            addMessage(
+                                "assistant",
+                                `🔗 **[Via Zoho SalesIQ]**\n\n${data.response}`,
+                            );
+                            sessionMessageCount++;
+                            updateStats();
+                        } else {
+                            addMessage(
+                                "assistant",
+                                `❌ Zoho integration error: ${data.error}`,
+                                true,
+                            );
+                        }
+                    } else {
+                        addMessage(
+                            "assistant",
+                            "❌ Failed to connect to Zoho SalesIQ webhook",
+                            true,
+                        );
+                    }
+                } catch (error) {
+                    hideTypingIndicator();
+                    addMessage(
+                        "assistant",
+                        `❌ Zoho SalesIQ error: ${error.message}`,
                         true,
                     );
                 } finally {
@@ -2884,6 +3204,11 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                     contentDiv.style.background = "#fef2f2";
                     contentDiv.style.borderColor = "#fecaca";
                     contentDiv.style.color = "#dc2626";
+                } else if (sender === "system") {
+                    contentDiv.style.background =
+                        "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)";
+                    contentDiv.style.borderColor = "rgba(99, 102, 241, 0.3)";
+                    contentDiv.style.color = "var(--text-primary)";
                 }
 
                 // Format text (basic markdown-like formatting)
@@ -2898,8 +3223,8 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 messageDiv.appendChild(metaDiv);
                 chatMessages.appendChild(messageDiv);
 
-                // Save to chat history (unless explicitly disabled)
-                if (saveToHistory && !isError) {
+                // Save to chat history (unless explicitly disabled or system message)
+                if (saveToHistory && !isError && sender !== "system") {
                     addToChatHistory(sender, text);
                 }
 
@@ -2915,7 +3240,7 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                     .replace(/\n/g, "<br>");
             }
 
-            function showTypingIndicator() {
+            function showTypingIndicator(customText = null) {
                 const typingDiv = document.createElement("div");
                 typingDiv.className = "typing-indicator";
                 typingDiv.id = "typingIndicator";
@@ -2930,7 +3255,11 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 // Add helpful text
                 const textDiv = document.createElement("div");
                 textDiv.className = "typing-text";
-                textDiv.textContent = "AI is thinking...";
+                textDiv.textContent =
+                    customText ||
+                    (currentMode === "zoho"
+                        ? "Zoho SalesIQ processing..."
+                        : "AI is thinking...");
                 textDiv.style.fontSize = "0.75rem";
                 textDiv.style.color = "var(--text-secondary)";
                 textDiv.style.marginLeft = "8px";
@@ -2939,58 +3268,60 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 chatMessages.appendChild(typingDiv);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
 
-                // Progressive messages for longer waits
-                setTimeout(() => {
-                    const currentTyping =
-                        document.getElementById("typingIndicator");
-                    if (currentTyping) {
-                        const textElement =
-                            currentTyping.querySelector(".typing-text");
-                        if (textElement) {
-                            textElement.textContent =
-                                "Processing complex request...";
+                // Progressive messages for longer waits (only for direct mode)
+                if (currentMode === "direct" && !customText) {
+                    setTimeout(() => {
+                        const currentTyping =
+                            document.getElementById("typingIndicator");
+                        if (currentTyping) {
+                            const textElement =
+                                currentTyping.querySelector(".typing-text");
+                            if (textElement) {
+                                textElement.textContent =
+                                    "Processing complex request...";
+                            }
                         }
-                    }
-                }, 10000); // After 10 seconds
+                    }, 10000); // After 10 seconds
 
-                setTimeout(() => {
-                    const currentTyping =
-                        document.getElementById("typingIndicator");
-                    if (currentTyping) {
-                        const textElement =
-                            currentTyping.querySelector(".typing-text");
-                        if (textElement) {
-                            textElement.textContent =
-                                "AI model is working hard (up to 10 minutes for complex queries)...";
+                    setTimeout(() => {
+                        const currentTyping =
+                            document.getElementById("typingIndicator");
+                        if (currentTyping) {
+                            const textElement =
+                                currentTyping.querySelector(".typing-text");
+                            if (textElement) {
+                                textElement.textContent =
+                                    "AI model is working hard (up to 10 minutes for complex queries)...";
+                            }
                         }
-                    }
-                }, 30000); // After 30 seconds
+                    }, 30000); // After 30 seconds
 
-                setTimeout(() => {
-                    const currentTyping =
-                        document.getElementById("typingIndicator");
-                    if (currentTyping) {
-                        const textElement =
-                            currentTyping.querySelector(".typing-text");
-                        if (textElement) {
-                            textElement.textContent =
-                                "Almost ready, complex analysis takes time...";
+                    setTimeout(() => {
+                        const currentTyping =
+                            document.getElementById("typingIndicator");
+                        if (currentTyping) {
+                            const textElement =
+                                currentTyping.querySelector(".typing-text");
+                            if (textElement) {
+                                textElement.textContent =
+                                    "Almost ready, complex analysis takes time...";
+                            }
                         }
-                    }
-                }, 120000); // After 2 minutes
+                    }, 120000); // After 2 minutes
 
-                setTimeout(() => {
-                    const currentTyping =
-                        document.getElementById("typingIndicator");
-                    if (currentTyping) {
-                        const textElement =
-                            currentTyping.querySelector(".typing-text");
-                        if (textElement) {
-                            textElement.textContent =
-                                "Still processing - this is a really complex question!";
+                    setTimeout(() => {
+                        const currentTyping =
+                            document.getElementById("typingIndicator");
+                        if (currentTyping) {
+                            const textElement =
+                                currentTyping.querySelector(".typing-text");
+                            if (textElement) {
+                                textElement.textContent =
+                                    "Still processing - this is a really complex question!";
+                            }
                         }
-                    }
-                }, 300000); // After 5 minutes
+                    }, 300000); // After 5 minutes
+                }
             }
 
             function hideTypingIndicator() {
