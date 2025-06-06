@@ -2047,29 +2047,59 @@
 
                 console.log("🔍 Monitoring Zoho webhook integration...");
 
-                // Check webhook endpoint health
+                // Check webhook endpoint health with proper message format
+                const healthCheckPayload = {
+                    message: {
+                        text: "Health check",
+                        timestamp: Date.now(),
+                    },
+                    visitor: {
+                        id: sessionId || "health-check-session",
+                        name: "System",
+                        email: "system@health.check",
+                    },
+                    chat: {
+                        sessionId: sessionId || "health-check-session",
+                        messageCount: 0,
+                    },
+                    test: true,
+                    timestamp: Date.now(),
+                };
+
                 fetch(`${API_BASE}/webhook/zoho`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
+                        Accept: "application/json",
                     },
-                    body: JSON.stringify({
-                        test: true,
-                        timestamp: Date.now(),
-                    }),
+                    body: JSON.stringify(healthCheckPayload),
                 })
-                    .then((response) => response.json())
-                    .then((data) => {
-                        console.log(
-                            "✅ Zoho webhook endpoint is responsive:",
-                            data,
-                        );
+                    .then(async (response) => {
+                        if (response.ok) {
+                            const data = await response.json();
+                            console.log(
+                                "✅ Zoho webhook endpoint is responsive:",
+                                data,
+                            );
+                            updateStatus("Zoho webhook healthy", "online");
+                        } else {
+                            const errorText = await response.text();
+                            console.warn(
+                                `⚠️ Zoho webhook returned ${response.status}:`,
+                                errorText,
+                            );
+                            updateStatus(
+                                `Zoho webhook error (${response.status})`,
+                                "error",
+                            );
+                        }
                     })
                     .catch((error) => {
                         console.warn(
                             "⚠️ Zoho webhook endpoint test failed:",
                             error,
                         );
+                        updateStatus("Zoho webhook unreachable", "error");
                     });
             }
             // Instructions overlay for Zoho setup (global function)
@@ -2160,6 +2190,138 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
 
                 // Test webhook connectivity (optional)
                 setTimeout(monitorZohoWebhooks, 5000); // After 5 seconds
+
+                // Validate configuration
+                setTimeout(validateZohoConfiguration, 2000); // After 2 seconds
+            }
+
+            // Parse different Zoho webhook response formats
+            function parseZohoResponse(data) {
+                console.log("📝 Parsing Zoho response:", data);
+
+                // Handle different response formats
+                if (data.success && data.response) {
+                    return {
+                        success: true,
+                        message: data.response,
+                        source: "response field",
+                    };
+                }
+
+                if (data.message) {
+                    return {
+                        success: true,
+                        message: data.message,
+                        source: "message field",
+                    };
+                }
+
+                if (data.reply) {
+                    return {
+                        success: true,
+                        message: data.reply,
+                        source: "reply field",
+                    };
+                }
+
+                if (data.text) {
+                    return {
+                        success: true,
+                        message: data.text,
+                        source: "text field",
+                    };
+                }
+
+                if (data.data && data.data.message) {
+                    return {
+                        success: true,
+                        message: data.data.message,
+                        source: "nested data.message",
+                    };
+                }
+
+                // If no recognizable success format, check for errors
+                if (data.error) {
+                    return {
+                        success: false,
+                        error: data.error,
+                        source: "error field",
+                    };
+                }
+
+                // If response has any string content, use it
+                if (typeof data === "string") {
+                    return {
+                        success: true,
+                        message: data,
+                        source: "raw string",
+                    };
+                }
+
+                // Default fallback
+                return {
+                    success: false,
+                    error: "Unable to parse response format",
+                    source: "parser fallback",
+                    rawData: data,
+                };
+            }
+
+            // Validate Zoho configuration and provide detailed feedback
+            function validateZohoConfiguration() {
+                console.log("🔧 Validating Zoho configuration...");
+
+                const issues = [];
+
+                // Check API endpoint
+                if (!API_BASE) {
+                    issues.push("API_BASE is not configured");
+                } else if (!API_BASE.startsWith("http")) {
+                    issues.push(
+                        "API_BASE should start with http:// or https://",
+                    );
+                } else {
+                    console.log(`✅ API_BASE configured: ${API_BASE}`);
+                }
+
+                // Check session ID
+                if (!sessionId) {
+                    issues.push("Session ID is not initialized");
+                } else {
+                    console.log(`✅ Session ID: ${sessionId}`);
+                }
+
+                // Check if webhook endpoint is reachable (async)
+                fetch(`${API_BASE}/webhook/zoho`, {
+                    method: "OPTIONS",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                })
+                    .then((response) => {
+                        if (!response.ok) {
+                            console.warn(
+                                `⚠️ Webhook endpoint returned ${response.status}`,
+                            );
+                        } else {
+                            console.log("✅ Webhook endpoint is reachable");
+                        }
+                    })
+                    .catch((error) => {
+                        console.warn(
+                            "⚠️ Webhook endpoint not reachable:",
+                            error.message,
+                        );
+                    });
+
+                if (issues.length > 0) {
+                    console.warn("⚠️ Zoho configuration issues found:", issues);
+                    issues.forEach((issue) => console.warn(`  - ${issue}`));
+                    return false;
+                } else {
+                    console.log("✅ Zoho configuration looks good");
+                    return true;
+                }
             }
         </script>
 
@@ -2826,6 +2988,25 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
 
             function switchToZohoMode() {
                 console.log("🔗 Switching to Zoho SalesIQ mode...");
+
+                // Validate configuration before switching
+                const configValid = validateZohoConfiguration();
+                if (!configValid) {
+                    addMessage(
+                        "system",
+                        `⚠️ **Zoho Configuration Issues Detected**
+
+Some configuration issues were found. Check the console for details.
+
+• API endpoint may not be reachable
+• Session configuration may be incomplete
+
+Mode switch proceeding, but functionality may be limited.`,
+                        false,
+                        false,
+                    );
+                }
+
                 currentMode = "zoho";
                 localStorage.setItem("chatMode", "zoho");
 
@@ -2838,6 +3019,7 @@ Your messages will now be sent through Zoho SalesIQ integration.
 • Professional chat interface
 • Zoho widget features enabled
 • Messages routed through SalesIQ webhooks
+• Current API endpoint: ${API_BASE}/webhook/zoho
 
 Type \`#direct\` to switch back to direct LLM mode.`,
                     false,
@@ -2854,10 +3036,26 @@ Type \`#direct\` to switch back to direct LLM mode.`,
                 ) {
                     try {
                         window.$zoho.salesiq.chat.start();
+                        console.log("✅ Zoho widget activated");
                     } catch (e) {
-                        console.log("Zoho widget not fully loaded yet");
+                        console.log(
+                            "⚠️ Zoho widget not fully loaded yet:",
+                            e.message,
+                        );
                     }
+                } else {
+                    console.log(
+                        "ℹ️ Zoho widget not detected, using webhook integration",
+                    );
                 }
+
+                // Test webhook connectivity
+                setTimeout(() => {
+                    console.log(
+                        "🔍 Testing webhook connectivity after mode switch...",
+                    );
+                    monitorZohoWebhooks();
+                }, 1000);
             }
 
             function switchToDirectMode() {
@@ -2996,45 +3194,85 @@ ${document.getElementById("integrationStatus").textContent}`,
                 showTypingIndicator("Sending via Zoho SalesIQ...");
 
                 try {
-                    // Send message through webhook to simulate Zoho integration
+                    // Send message through webhook with proper format
+                    const requestBody = {
+                        message: {
+                            text: message,
+                            timestamp: Date.now(),
+                        },
+                        visitor: {
+                            id: sessionId,
+                            name: "User",
+                            email: "user@example.com",
+                        },
+                        chat: {
+                            sessionId: sessionId,
+                            messageCount: sessionMessageCount,
+                        },
+                    };
+
                     const response = await fetch(`${API_BASE}/webhook/zoho`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
+                            Accept: "application/json",
                         },
-                        body: JSON.stringify({
-                            message: { text: message },
-                            visitor: { id: sessionId },
-                        }),
+                        body: JSON.stringify(requestBody),
                     });
 
                     hideTypingIndicator();
 
                     if (response.ok) {
                         const data = await response.json();
-                        if (data.success) {
+                        const parsed = parseZohoResponse(data);
+
+                        console.log(
+                            `📊 Parsed response (${parsed.source}):`,
+                            parsed,
+                        );
+
+                        if (parsed.success) {
                             addMessage(
                                 "assistant",
-                                `🔗 **[Via Zoho SalesIQ]**\n\n${data.response}`,
+                                `🔗 **[Via Zoho SalesIQ]**\n\n${parsed.message}`,
                             );
                             sessionMessageCount++;
                             updateStats();
                         } else {
+                            console.error(
+                                "Zoho response parsing failed:",
+                                parsed,
+                            );
                             addMessage(
                                 "assistant",
-                                `❌ Zoho integration error: ${data.error}`,
+                                `❌ Zoho integration error: ${parsed.error || "Failed to parse response"}`,
                                 true,
                             );
+
+                            // Log raw data for debugging
+                            if (parsed.rawData) {
+                                console.log(
+                                    "Raw response data:",
+                                    parsed.rawData,
+                                );
+                            }
                         }
                     } else {
+                        const errorText = await response.text();
+                        console.error(
+                            "Zoho webhook error:",
+                            response.status,
+                            errorText,
+                        );
                         addMessage(
                             "assistant",
-                            "❌ Failed to connect to Zoho SalesIQ webhook",
+                            `❌ Failed to connect to Zoho SalesIQ webhook (${response.status})`,
                             true,
                         );
                     }
                 } catch (error) {
                     hideTypingIndicator();
+                    console.error("Zoho SalesIQ error:", error);
                     addMessage(
                         "assistant",
                         `❌ Zoho SalesIQ error: ${error.message}`,

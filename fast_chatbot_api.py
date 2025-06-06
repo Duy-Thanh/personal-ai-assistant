@@ -40,9 +40,9 @@ stats = {
 
 def get_session_id(request) -> str:
     """Generate or retrieve session ID"""
-    session_id = request.headers.get('X-Session-ID', 
+    session_id = request.headers.get('X-Session-ID',
                  request.remote_addr + "_" + str(int(time.time())))
-    
+
     # Track session metadata
     if session_id not in session_metadata:
         session_metadata[session_id] = {
@@ -53,58 +53,58 @@ def get_session_id(request) -> str:
         }
     else:
         session_metadata[session_id]["last_activity"] = datetime.now().isoformat()
-    
+
     return session_id
 
 def get_conversation_history(session_id: str) -> List[Dict]:
     """Get conversation history for a session with memory conservation"""
     if session_id not in conversations:
         conversations[session_id] = []
-    
+
     # Keep only last MAX_CONTEXT_MESSAGES for memory efficiency
     if len(conversations[session_id]) > MAX_CONTEXT_MESSAGES:
         conversations[session_id] = conversations[session_id][-MAX_CONTEXT_MESSAGES:]
-    
+
     return conversations[session_id]
 
 def add_to_conversation(session_id: str, user_message: str, ai_response: str):
     """Add exchange to conversation history with automatic cleanup"""
     if session_id not in conversations:
         conversations[session_id] = []
-    
+
     conversations[session_id].append({
         "user": user_message,
         "assistant": ai_response,
         "timestamp": datetime.now().isoformat()
     })
-    
+
     # Update session metadata
     if session_id in session_metadata:
         session_metadata[session_id]["message_count"] += 1
         session_metadata[session_id]["last_activity"] = datetime.now().isoformat()
-    
+
     # Keep only recent exchanges to prevent memory bloat
     if len(conversations[session_id]) > MAX_CONVERSATION_LENGTH:
         conversations[session_id] = conversations[session_id][-MAX_CONVERSATION_LENGTH:]
-    
+
     logger.info(f"Session {session_id[:8]}... now has {len(conversations[session_id])} exchanges")
 
 def build_context_prompt(session_id: str, current_message: str) -> str:
     """Build prompt with conversation context"""
     history = get_conversation_history(session_id)
-    
+
     if not history:
         return f"User: {current_message}\nAssistant:"
-    
+
     # Build context from recent conversation
     context_parts = []
     for exchange in history[-3:]:  # Last 3 exchanges for context
         context_parts.append(f"User: {exchange['user']}")
         context_parts.append(f"Assistant: {exchange['assistant']}")
-    
+
     context_parts.append(f"User: {current_message}")
     context_parts.append("Assistant:")
-    
+
     return "\n".join(context_parts)
 
 def query_ollama(prompt: str) -> tuple[str, bool]:
@@ -113,9 +113,9 @@ def query_ollama(prompt: str) -> tuple[str, bool]:
         # Use configurable timeout for AI responses
         # AI models can take time to think, especially for complex queries
         timeout_duration = OLLAMA_TIMEOUT
-        
+
         logger.info(f"Sending request to Ollama (timeout: {timeout_duration}s)")
-        
+
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/generate",
             json={
@@ -132,11 +132,11 @@ def query_ollama(prompt: str) -> tuple[str, bool]:
             },
             timeout=timeout_duration
         )
-        
+
         if response.status_code == 200:
             result = response.json()
             ai_response = result.get("response", "").strip()
-            
+
             if ai_response:
                 logger.info(f"Ollama response received successfully ({len(ai_response)} chars)")
                 return ai_response, True
@@ -146,7 +146,7 @@ def query_ollama(prompt: str) -> tuple[str, bool]:
         else:
             logger.error(f"Ollama API error: {response.status_code} - {response.text}")
             return "Sorry, I'm experiencing technical difficulties. Please try again in a moment.", False
-            
+
     except requests.exceptions.Timeout as e:
         logger.error(f"Ollama request timed out after {timeout_duration}s: {e}")
         return "I'm taking longer than usual to process your request. The AI model is working hard on your question - please try again or simplify your request.", False
@@ -202,19 +202,19 @@ def chat_interface():
     <body>
         <h1>🤖 Personal AI Assistant - Test Interface</h1>
         <div class="stats">
-            <strong>Status:</strong> <span id="status">Checking...</span> | 
-            <strong>Model:</strong> {{ model_name }} | 
+            <strong>Status:</strong> <span id="status">Checking...</span> |
+            <strong>Model:</strong> {{ model_name }} |
             <strong>API:</strong> /chat
         </div>
-        
+
         <div class="chat-container" id="chatContainer"></div>
-        
+
         <div>
             <input type="text" id="messageInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
             <button onclick="sendMessage()">Send</button>
             <button onclick="clearChat()">Clear</button>
         </div>
-        
+
         <div class="stats">
             <h3>API Endpoints:</h3>
             <ul>
@@ -226,7 +226,7 @@ def chat_interface():
 
         <script>
             let sessionId = 'test_' + Date.now();
-            
+
             async function checkStatus() {
                 try {
                     const response = await fetch('/health');
@@ -236,15 +236,15 @@ def chat_interface():
                     document.getElementById('status').textContent = '❌ Offline';
                 }
             }
-            
+
             async function sendMessage() {
                 const input = document.getElementById('messageInput');
                 const message = input.value.trim();
                 if (!message) return;
-                
+
                 addMessage('user', message);
                 input.value = '';
-                
+
                 try {
                     const response = await fetch('/chat', {
                         method: 'POST',
@@ -254,7 +254,7 @@ def chat_interface():
                         },
                         body: JSON.stringify({ message: message })
                     });
-                    
+
                     const data = await response.json();
                     if (data.success) {
                         addMessage('assistant', data.response);
@@ -265,7 +265,7 @@ def chat_interface():
                     addMessage('assistant', 'Connection error: ' + error.message);
                 }
             }
-            
+
             function addMessage(sender, text) {
                 const container = document.getElementById('chatContainer');
                 const messageDiv = document.createElement('div');
@@ -274,18 +274,18 @@ def chat_interface():
                 container.appendChild(messageDiv);
                 container.scrollTop = container.scrollHeight;
             }
-            
+
             function clearChat() {
                 document.getElementById('chatContainer').innerHTML = '';
                 sessionId = 'test_' + Date.now();
             }
-            
+
             function handleKeyPress(event) {
                 if (event.key === 'Enter') {
                     sendMessage();
                 }
             }
-            
+
             // Check status on load
             checkStatus();
             setInterval(checkStatus, 30000); // Check every 30 seconds
@@ -298,7 +298,7 @@ def chat_interface():
 def chat():
     """Main chat endpoint"""
     stats["total_requests"] += 1
-    
+
     try:
         data = request.get_json()
         if not data or 'message' not in data:
@@ -307,7 +307,7 @@ def chat():
                 "success": False,
                 "error": "Missing 'message' in request body"
             }), 400
-        
+
         user_message = data['message'].strip()
         if not user_message:
             stats["failed_requests"] += 1
@@ -315,20 +315,20 @@ def chat():
                 "success": False,
                 "error": "Empty message"
             }), 400
-        
+
         session_id = get_session_id(request)
-        
+
         # Build context-aware prompt
         prompt = build_context_prompt(session_id, user_message)
-        
+
         # Query Ollama with extended timeout
         ai_response, success = query_ollama(prompt)
-        
+
         if success:
             # Add to conversation history
             add_to_conversation(session_id, user_message, ai_response)
             stats["successful_requests"] += 1
-            
+
             return jsonify({
                 "success": True,
                 "response": ai_response,
@@ -342,7 +342,7 @@ def chat():
                 "error": "Failed to get response from AI model",
                 "response": ai_response  # Fallback message
             }), 500
-            
+
     except Exception as e:
         stats["failed_requests"] += 1
         logger.error(f"Chat endpoint error: {e}")
@@ -355,7 +355,7 @@ def chat():
 def chat_stream():
     """Streaming chat endpoint for long responses"""
     stats["total_requests"] += 1
-    
+
     try:
         data = request.get_json()
         if not data or 'message' not in data:
@@ -364,7 +364,7 @@ def chat_stream():
                 "success": False,
                 "error": "Missing 'message' in request body"
             }), 400
-        
+
         user_message = data['message'].strip()
         if not user_message:
             stats["failed_requests"] += 1
@@ -372,17 +372,17 @@ def chat_stream():
                 "success": False,
                 "error": "Empty message"
             }), 400
-        
+
         session_id = get_session_id(request)
-        
+
         def generate_stream():
             try:
                 # Build context-aware prompt
                 prompt = build_context_prompt(session_id, user_message)
-                
+
                 # Send immediate acknowledgment
                 yield f"data: {json.dumps({'status': 'processing', 'message': 'AI is thinking...'})}\n\n"
-                
+
                 # Query Ollama with streaming
                 response = requests.post(
                     f"{OLLAMA_BASE_URL}/api/generate",
@@ -400,7 +400,7 @@ def chat_stream():
                     stream=True,
                     timeout=OLLAMA_TIMEOUT
                 )
-                
+
                 if response.status_code == 200:
                     full_response = ""
                     for line in response.iter_lines():
@@ -410,20 +410,20 @@ def chat_stream():
                                 if 'response' in chunk_data:
                                     chunk_text = chunk_data['response']
                                     full_response += chunk_text
-                                    
+
                                     # Send chunk to client
                                     yield f"data: {json.dumps({'status': 'streaming', 'chunk': chunk_text, 'full_response': full_response})}\n\n"
-                                
+
                                 if chunk_data.get('done', False):
                                     break
                             except json.JSONDecodeError:
                                 continue
-                    
+
                     # Save to conversation history
                     if full_response.strip():
                         add_to_conversation(session_id, user_message, full_response.strip())
                         stats["successful_requests"] += 1
-                        
+
                         # Send completion signal
                         yield f"data: {json.dumps({'status': 'complete', 'full_response': full_response.strip(), 'session_id': session_id})}\n\n"
                     else:
@@ -432,7 +432,7 @@ def chat_stream():
                 else:
                     stats["failed_requests"] += 1
                     yield f"data: {json.dumps({'status': 'error', 'error': f'API error: {response.status_code}'})}\n\n"
-                    
+
             except requests.exceptions.Timeout:
                 stats["failed_requests"] += 1
                 yield f"data: {json.dumps({'status': 'error', 'error': 'Request timed out - AI model is taking too long'})}\n\n"
@@ -440,7 +440,7 @@ def chat_stream():
                 stats["failed_requests"] += 1
                 logger.error(f"Streaming error: {e}")
                 yield f"data: {json.dumps({'status': 'error', 'error': str(e)})}\n\n"
-        
+
         return Response(
             generate_stream(),
             mimetype='text/event-stream',
@@ -451,7 +451,7 @@ def chat_stream():
                 'Access-Control-Allow-Headers': 'Content-Type, X-Session-ID'
             }
         )
-        
+
     except Exception as e:
         stats["failed_requests"] += 1
         logger.error(f"Chat stream endpoint error: {e}")
@@ -467,7 +467,7 @@ def health():
         # Test Ollama connection
         response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
         ollama_healthy = response.status_code == 200
-        
+
         return jsonify({
             "status": "healthy" if ollama_healthy else "unhealthy",
             "ollama_status": "connected" if ollama_healthy else "disconnected",
@@ -487,9 +487,9 @@ def get_stats():
     """Get usage statistics with enhanced memory info"""
     # Perform cleanup and update active sessions
     cleanup_old_sessions()
-    
+
     total_messages = sum(len(conv) for conv in conversations.values())
-    
+
     return jsonify({
         **stats,
         "active_sessions": len(session_metadata),
@@ -516,26 +516,26 @@ def zoho_webhook():
     """Webhook endpoint for Zoho SalesIQ (Day 2)"""
     try:
         data = request.get_json()
-        
+
         # Extract message from Zoho webhook
         user_message = data.get('message', {}).get('text', '')
         visitor_id = data.get('visitor', {}).get('id', 'unknown')
-        
+
         if not user_message:
             return jsonify({"error": "No message found"}), 400
-        
+
         # Use visitor ID as session ID
         session_id = f"zoho_{visitor_id}"
-        
+
         # Build context-aware prompt
         prompt = build_context_prompt(session_id, user_message)
-        
+
         # Query Ollama
         ai_response, success = query_ollama(prompt)
-        
+
         if success:
             add_to_conversation(session_id, user_message, ai_response)
-            
+
             # Return response in Zoho format
             return jsonify({
                 "response": ai_response,
@@ -546,7 +546,7 @@ def zoho_webhook():
                 "response": "I'm sorry, I'm experiencing technical difficulties right now.",
                 "success": False
             }), 500
-            
+
     except Exception as e:
         logger.error(f"Zoho webhook error: {e}")
         return jsonify({
@@ -558,20 +558,20 @@ def cleanup_old_sessions():
     """Clean up sessions older than 24 hours"""
     cutoff_time = datetime.now().timestamp() - (24 * 60 * 60)  # 24 hours ago
     sessions_to_remove = []
-    
+
     for session_id, metadata in session_metadata.items():
         last_activity = datetime.fromisoformat(metadata["last_activity"]).timestamp()
         if last_activity < cutoff_time:
             sessions_to_remove.append(session_id)
-    
+
     for session_id in sessions_to_remove:
         conversations.pop(session_id, None)
         session_metadata.pop(session_id, None)
         logger.info(f"Cleaned up old session: {session_id[:8]}...")
-    
+
     if sessions_to_remove:
         logger.info(f"Cleaned up {len(sessions_to_remove)} old sessions")
-    
+
     stats["last_cleanup"] = datetime.now().isoformat()
     stats["active_sessions"] = len(session_metadata)
 
@@ -584,5 +584,5 @@ if __name__ == '__main__':
     print("🌐 Access the test interface at: http://localhost:5000/")
     print("📡 API endpoints available at: /chat, /health, /stats")
     print("💡 Tip: Set OLLAMA_TIMEOUT environment variable to adjust timeout")
-    
+
     app.run(host='0.0.0.0', port=5000, debug=True)
