@@ -3679,7 +3679,7 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => {
                         controller.abort();
-                    }, 30000); // 30 second timeout
+                    }, 600000); // 10 minute timeout
 
                     const response = await fetch(`${API_BASE}/chat/stream`, {
                         method: "POST",
