@@ -511,49 +511,6 @@ def get_stats():
         "timestamp": datetime.now().isoformat()
     })
 
-@app.route('/webhook/zoho', methods=['POST'])
-def zoho_webhook():
-    """Webhook endpoint for Zoho SalesIQ (Day 2)"""
-    try:
-        data = request.get_json()
-
-        # Extract message from Zoho webhook
-        user_message = data.get('message', {}).get('text', '')
-        visitor_id = data.get('visitor', {}).get('id', 'unknown')
-
-        if not user_message:
-            return jsonify({"error": "No message found"}), 400
-
-        # Use visitor ID as session ID
-        session_id = f"zoho_{visitor_id}"
-
-        # Build context-aware prompt
-        prompt = build_context_prompt(session_id, user_message)
-
-        # Query Ollama
-        ai_response, success = query_ollama(prompt)
-
-        if success:
-            add_to_conversation(session_id, user_message, ai_response)
-
-            # Return response in Zoho format
-            return jsonify({
-                "response": ai_response,
-                "success": True
-            })
-        else:
-            return jsonify({
-                "response": "I'm sorry, I'm experiencing technical difficulties right now.",
-                "success": False
-            }), 500
-
-    except Exception as e:
-        logger.error(f"Zoho webhook error: {e}")
-        return jsonify({
-            "response": "Sorry, something went wrong.",
-            "success": False
-        }), 500
-
 def cleanup_old_sessions():
     """Clean up sessions older than 24 hours"""
     cutoff_time = datetime.now().timestamp() - (24 * 60 * 60)  # 24 hours ago
