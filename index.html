@@ -1183,6 +1183,61 @@
                 box-shadow: 0 8px 25px rgba(6, 182, 212, 0.4);
             }
 
+            /* Zoho Services Styling */
+            .sidebar-section h3 i.fa-calendar-alt {
+                color: #4f46e5;
+            }
+
+            .sidebar-section h3 i.fa-headset {
+                color: #059669;
+            }
+
+            /* Widget Container Styling */
+            .widget-container {
+                margin-top: 1rem;
+                padding: 1rem;
+                background: linear-gradient(
+                    135deg,
+                    rgba(255, 255, 255, 0.9) 0%,
+                    rgba(248, 250, 252, 0.9) 100%
+                );
+                border-radius: var(--border-radius);
+                border: 1px solid rgba(99, 102, 241, 0.2);
+                backdrop-filter: blur(10px);
+                animation: slideIn 0.3s ease-out;
+            }
+
+            .widget-container iframe {
+                width: 100%;
+                border: none;
+                border-radius: 8px;
+            }
+
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            /* Enhanced action buttons for Zoho services */
+            .action-btn:hover {
+                transform: translateY(-2px);
+                transition: all 0.3s ease;
+            }
+
+            .action-btn.secondary {
+                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            }
+
+            .action-btn.accent {
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            }
+
             /* Enhanced Memory Indicator */
             .memory-indicator {
                 background: linear-gradient(
@@ -1714,6 +1769,61 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Zoho Bookings Section -->
+                    <div class="sidebar-section">
+                        <h3>
+                            <i class="fas fa-calendar-alt"></i> Zoho Bookings
+                        </h3>
+                        <div class="action-buttons">
+                            <button
+                                class="action-btn secondary"
+                                onclick="toggleBookingWidget()"
+                            >
+                                <i class="fas fa-calendar-plus"></i>
+                                Book Meeting
+                            </button>
+                            <button
+                                class="action-btn info"
+                                onclick="showBookingInfo()"
+                            >
+                                <i class="fas fa-info-circle"></i>
+                                About Bookings
+                            </button>
+                        </div>
+                        <div
+                            id="bookingWidget"
+                            class="widget-container"
+                            style="display: none"
+                        ></div>
+                    </div>
+
+                    <!-- Zoho Assist Section -->
+                    <div class="sidebar-section">
+                        <h3><i class="fas fa-headset"></i> Zoho Assist</h3>
+                        <div class="action-buttons">
+                            <button
+                                class="action-btn accent"
+                                onclick="toggleAssistWidget()"
+                            >
+                                <i class="fas fa-desktop"></i>
+                                Remote Support
+                            </button>
+                            <button
+                                class="action-btn primary"
+                                onclick="showAssistInfo()"
+                            >
+                                <i class="fas fa-question-circle"></i>
+                                Get Help
+                            </button>
+                        </div>
+                        <div
+                            id="assistWidget"
+                            class="widget-container"
+                            style="display: none"
+                        ></div>
+                    </div>
+
                     <div class="sidebar-section">
                         <h3><i class="fas fa-info-circle"></i> About</h3>
                         <p
@@ -4307,7 +4417,136 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-            } // Initialize application
+            }
+
+            // Zoho Bookings Integration Functions
+            function toggleBookingWidget() {
+                console.log("📅 Toggling Zoho Bookings widget...");
+                const widget = document.getElementById("bookingWidget");
+
+                if (widget.style.display === "none") {
+                    // Show widget
+                    widget.style.display = "block";
+
+                    // Create booking iframe if not exists
+                    if (!widget.innerHTML) {
+                        // TODO: Replace 'javalorant' with your actual Zoho Bookings portal name
+                        // Get this from: Zoho Bookings → Workspaces → Share → Embed
+                        widget.innerHTML = `
+                            <iframe
+                                src="https://bookings.zoho.com/portal/javalorant"
+                                height="500"
+                                style="border: none; border-radius: 8px;">
+                            </iframe>
+                            <div style="text-align: center; margin-top: 0.5rem;">
+                                <small style="color: #666;">Powered by Zoho Bookings</small>
+                                <br><small style="color: #999;">Update portal URL in code with your booking page</small>
+                            </div>
+                        `;
+                    }
+
+                    addMessage(
+                        "system",
+                        "📅 **Zoho Bookings Widget Activated**\n\n" +
+                            "**Setup Required:**\n" +
+                            "1. Create account at https://bookings.zoho.com\n" +
+                            "2. Set up your booking service\n" +
+                            "3. Get your portal URL from Workspaces → Share → Embed\n" +
+                            "4. Replace 'javalorant' in code with your portal name\n\n" +
+                            "**Features:**\n" +
+                            "• Choose available time slots\n" +
+                            "• Automatic calendar sync\n" +
+                            "• Email confirmations\n" +
+                            "• No back-and-forth emails",
+                    );
+                } else {
+                    // Hide widget
+                    widget.style.display = "none";
+                    addMessage("system", "📅 Booking widget hidden.");
+                }
+            }
+
+            function showBookingInfo() {
+                addMessage(
+                    "system",
+                    "📅 **Zoho Bookings Setup Guide**\n\n" +
+                        "**Free Account Setup:**\n" +
+                        "1. Visit https://bookings.zoho.com\n" +
+                        "2. Sign up with your Zoho account\n" +
+                        "3. Create your first service (consultation, demo, etc.)\n" +
+                        "4. Set your availability and time zone\n" +
+                        "5. Customize your booking page\n\n" +
+                        "**Get Widget URL:**\n" +
+                        "• Go to Workspaces → Share → Embed\n" +
+                        "• Copy your portal URL\n" +
+                        "• Replace 'javalorant' in the code\n\n" +
+                        "**Free Features:** 1 event type, calendar sync, notifications",
+                );
+            }
+
+            // Zoho Assist Integration Functions
+            function toggleAssistWidget() {
+                console.log("🛠️ Toggling Zoho Assist widget...");
+                const widget = document.getElementById("assistWidget");
+
+                if (widget.style.display === "none") {
+                    // Show widget
+                    widget.style.display = "block";
+
+                    // Create assist iframe if not exists
+                    if (!widget.innerHTML) {
+                        widget.innerHTML = `
+                            <iframe
+                                src="https://assist.zoho.com/customer/join"
+                                height="400"
+                                style="border: none; border-radius: 8px;">
+                            </iframe>
+                            <div style="text-align: center; margin-top: 0.5rem;">
+                                <small style="color: #666;">Powered by Zoho Assist</small>
+                            </div>
+                        `;
+                    }
+
+                    addMessage(
+                        "system",
+                        "🛠️ **Zoho Assist Widget Activated**\n\n" +
+                            "**Setup Required:**\n" +
+                            "1. Create account at https://assist.zoho.com\n" +
+                            "2. Set up your organization\n" +
+                            "3. Get your custom assist URL\n" +
+                            "4. Update widget URL in code\n\n" +
+                            "**Features:**\n" +
+                            "• Screen sharing\n" +
+                            "• Remote control\n" +
+                            "• File transfer\n" +
+                            "• Voice/video chat",
+                    );
+                } else {
+                    // Hide widget
+                    widget.style.display = "none";
+                    addMessage("system", "🛠️ Remote support widget hidden.");
+                }
+            }
+
+            function showAssistInfo() {
+                addMessage(
+                    "system",
+                    "🛠️ **Zoho Assist Setup Guide**\n\n" +
+                        "**Free Account Setup:**\n" +
+                        "1. Visit https://assist.zoho.com\n" +
+                        "2. Sign up for free account\n" +
+                        "3. Set up your organization name\n" +
+                        "4. Configure security settings\n" +
+                        "5. Get your custom portal URL\n\n" +
+                        "**Widget Integration:**\n" +
+                        "• Copy your assist portal URL\n" +
+                        "• Update iframe src in the code\n" +
+                        "• Test remote session functionality\n\n" +
+                        "**Free Features:** Unlimited sessions, screen sharing, secure connections",
+                );
+            }
+
+            // Initialize application
             function initializeApp() {
                 console.log("🚀 Initializing Personal AI Assistant...");
                 console.log("Session ID:", sessionId);
@@ -4327,6 +4566,25 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
 
                 // Initialize Zoho SalesIQ integration monitoring
                 initializeZohoIntegration();
+
+                // Show welcome message for new Zoho services
+                if (chatHistory.length === 0) {
+                    addMessage(
+                        "system",
+                        "🎉 **Welcome to Enhanced Zoho Integration!**\n\n" +
+                            "I've been upgraded with embedded Zoho widgets:\n\n" +
+                            "📅 **Zoho Bookings** - Schedule appointments easily:\n" +
+                            "• Embedded booking widget\n" +
+                            "• Calendar integration\n" +
+                            "• Automatic notifications\n\n" +
+                            "🛠️ **Zoho Assist** - Get remote support:\n" +
+                            "• Screen sharing widget\n" +
+                            "• Remote troubleshooting\n" +
+                            "• Cross-platform support\n\n" +
+                            "💬 **Zoho SalesIQ** - Live chat integration\n\n" +
+                            "All widgets are embedded directly in the sidebar! How can I help you get started?",
+                    );
+                }
 
                 // Focus on input and initialize input info
                 if (messageInput) {
