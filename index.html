@@ -2193,6 +2193,120 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
 
                 // Validate configuration
                 setTimeout(validateZohoConfiguration, 2000); // After 2 seconds
+
+                // Comprehensive connectivity test
+                setTimeout(testConnectivity, 3000); // After 3 seconds
+            }
+
+            // Comprehensive connectivity test function
+            function testConnectivity() {
+                console.log("🔍 Running comprehensive connectivity test...");
+
+                const tests = [
+                    {
+                        name: "Health Check",
+                        url: `${API_BASE}/health`,
+                        method: "GET",
+                    },
+                    {
+                        name: "Stats Check",
+                        url: `${API_BASE}/stats`,
+                        method: "GET",
+                    },
+                    {
+                        name: "Webhook Test",
+                        url: `${API_BASE}/webhook/zoho`,
+                        method: "POST",
+                        body: {
+                            message: {
+                                text: "Connection test",
+                                timestamp: Date.now(),
+                            },
+                            visitor: {
+                                id: "test-user",
+                                name: "Test",
+                                email: "test@test.com",
+                            },
+                            chat: {
+                                sessionId: "test-session",
+                                messageCount: 1,
+                            },
+                            test: true,
+                        },
+                    },
+                ];
+
+                tests.forEach(async (test, index) => {
+                    try {
+                        console.log(
+                            `🧪 Test ${index + 1}: ${test.name} - ${test.url}`,
+                        );
+
+                        const options = {
+                            method: test.method,
+                            headers: {
+                                "Content-Type": "application/json",
+                                Accept: "application/json",
+                            },
+                        };
+
+                        if (test.body) {
+                            options.body = JSON.stringify(test.body);
+                        }
+
+                        const response = await fetch(test.url, options);
+                        const responseText = await response.text();
+
+                        if (response.ok) {
+                            console.log(
+                                `✅ ${test.name} PASSED (${response.status})`,
+                            );
+                            try {
+                                const data = JSON.parse(responseText);
+                                console.log(`   Response:`, data);
+                            } catch (e) {
+                                console.log(
+                                    `   Response (text):`,
+                                    responseText.substring(0, 200),
+                                );
+                            }
+                        } else {
+                            console.warn(
+                                `❌ ${test.name} FAILED (${response.status})`,
+                            );
+                            console.warn(
+                                `   Error:`,
+                                responseText.substring(0, 500),
+                            );
+                        }
+                    } catch (error) {
+                        console.error(`💥 ${test.name} ERROR:`, error.message);
+                    }
+                });
+
+                // Test if server is running on alternative ports
+                const alternativePorts = [":5000", ":8000", ":3000"];
+                const baseUrl = API_BASE.replace(/:\d+$/, "");
+
+                alternativePorts.forEach(async (port) => {
+                    try {
+                        const testUrl = `${baseUrl}${port}/health`;
+                        console.log(`🔍 Testing alternative port: ${testUrl}`);
+
+                        const response = await fetch(testUrl, {
+                            method: "GET",
+                            timeout: 5000,
+                        });
+
+                        if (response.ok) {
+                            console.log(
+                                `✅ Server found on alternative port: ${port}`,
+                            );
+                        }
+                    } catch (error) {
+                        console.log(`❌ No server on port ${port}`);
+                    }
+                });
             }
 
             // Parse different Zoho webhook response formats
@@ -2326,31 +2440,31 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
         </script>
 
         <script>
-            // Application State
-            let sessionId =
-                localStorage.getItem("chatSessionId") ||
-                "web_" +
-                    Date.now() +
-                    "_" +
-                    Math.random().toString(36).substr(2, 9);
-            let sessionMessageCount = 0;
-            let isWaitingForResponse = false;
-            let lastResponseTime = 0;
-            let chatHistory =
-                JSON.parse(localStorage.getItem("chatHistory_" + sessionId)) ||
-                [];
-            let sessionStartTime =
-                localStorage.getItem("sessionStartTime_" + sessionId) ||
-                Date.now();
+                        // Application State
+                        let sessionId =
+                            localStorage.getItem("chatSessionId") ||
+                            "web_" +
+                                Date.now() +
+                                "_" +
+                                Math.random().toString(36).substr(2, 9);
+                        let sessionMessageCount = 0;
+                        let isWaitingForResponse = false;
+                        let lastResponseTime = 0;
+                        let chatHistory =
+                            JSON.parse(localStorage.getItem("chatHistory_" + sessionId)) ||
+                            [];
+                        let sessionStartTime =
+                            localStorage.getItem("sessionStartTime_" + sessionId) ||
+                            Date.now();
 
-            // Conversation Management State
-            let conversations =
-                JSON.parse(localStorage.getItem("conversations")) || {};
-            let currentConversationId = sessionId;
+                        // Conversation Management State
+                        let conversations =
+                            JSON.parse(localStorage.getItem("conversations")) || {};
+                        let currentConversationId = sessionId;
 
-            // Dual Mode System - Direct LLM vs Zoho SalesIQ
-            let currentMode = localStorage.getItem("chatMode") || "direct"; // "direct" or "zoho"
-            let zohoWidget = null;
+                        // Dual Mode System - Direct LLM vs Zoho SalesIQ
+                        let currentMode = localStorage.getItem("chatMode") || "direct"; // "direct" or "zoho"
+                        let zohoWidget = null;
 
             // Save session ID to localStorage
             localStorage.setItem("chatSessionId", sessionId);
@@ -2359,8 +2473,16 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 sessionStartTime,
             );
 
-            // API Configuration
-            const API_BASE = window.location.origin; // Uses same domain as the page
+            // API Configuration with fallback
+            let API_BASE = window.location.origin; // Uses same domain as the page (nginx proxy)
+
+            // If running on localhost or file:// protocol, use direct server
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') {
+                API_BASE = "http://34.45.56.35";
+                console.log("🔧 Using direct server connection:", API_BASE);
+            } else {
+                console.log("🔧 Using nginx proxy connection:", API_BASE);
+            }
 
             // DOM Elements
             const chatMessages = document.getElementById("chatMessages");
@@ -2398,1431 +2520,1245 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                             "system",
                             `💡 **Welcome to Your Personal AI Assistant!**
 
-        **Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}
+                    **Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}
 
-        **Quick Commands:**
-        • Type \`#zoho\` to switch to Zoho SalesIQ mode
-        • Type \`#direct\` to switch to Direct LLM mode
-        • Type \`#zoho Hello\` to switch mode and send message
-        • Type \`#help\` for more commands
+                    **Quick Commands:**
+                    • Type \`#zoho\` to switch to Zoho SalesIQ mode
+                    • Type \`#direct\` to switch to Direct LLM mode
+                    • Type \`#zoho Hello\` to switch mode and send message
+                    • Type \`#help\` for more commands
 
-        Start chatting or use a command!`,
+                    Start chatting or use a command!`,
                             false,
                             false,
                         );
-                    }, 1000);
-                }
 
-                // Auto-resize textarea
-                messageInput.addEventListener("input", function () {
-                    this.style.height = "auto";
-                    this.style.height = Math.min(this.scrollHeight, 120) + "px";
-                });
-            });
+                        // Remove duplicate API_BASE declaration - using the one above
 
-            function setupEventListeners() {
-                // Send message on Enter (but allow Shift+Enter for new lines)
-                messageInput.addEventListener("keydown", function (e) {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        sendMessage();
-                    }
-                });
+                        // DOM Elements
+                        const chatMessages = document.getElementById("chatMessages");
+                        const messageInput = document.getElementById("messageInput");
+                        const sendButton = document.getElementById("sendButton");
+                        const statusDot = document.getElementById("statusDot");
+                        const statusText = document.getElementById("statusText"); // Initialize
+                        document.addEventListener("DOMContentLoaded", function () {
+                            // Load existing data first
+                            chatHistory =
+                                JSON.parse(
+                                    localStorage.getItem("chatHistory_" + sessionId),
+                                ) || [];
 
-                // Prevent empty form submission
-                messageInput.addEventListener("keyup", function () {
-                    const hasText = this.value.trim().length > 0;
-                    sendButton.disabled = !hasText || isWaitingForResponse;
-                });
-            }
+                            initializeConversations();
+                            checkApiHealth();
+                            setupEventListeners();
+                            messageInput.focus();
 
-            async function checkApiHealth() {
-                try {
-                    const response = await fetch(`${API_BASE}/health`);
-                    const data = await response.json();
+                            // Load existing chat history if available
+                            if (chatHistory.length > 0) {
+                                loadChatHistory();
+                            }
 
-                    if (data.status === "healthy") {
-                        updateStatus("online", "AI Online");
-                        updateModelInfo(data.model);
-                    } else {
-                        updateStatus("offline", "AI Offline");
-                    }
-                } catch (error) {
-                    console.error("Health check failed:", error);
-                    updateStatus("offline", "Connection Error");
-                }
-            }
+                            // Initialize Zoho integration monitoring
+                            initializeZohoIntegration();
 
-            function updateStatus(status, text) {
-                statusDot.className = `status-dot ${status}`;
-                statusText.textContent = text;
-            }
-            function updateModelInfo(model) {
-                const modelElement = document.getElementById("aiModel");
-                if (modelElement && model) {
-                    modelElement.textContent = model;
-                }
-            }
+                            // Initialize mode system
+                            updateModeIndicator();
 
-            // Conversation Management Functions
-            function initializeConversations() {
-                // Ensure current conversation exists in conversations list
-                if (!conversations[currentConversationId]) {
-                    const firstMessage =
-                        chatHistory.length > 0
-                            ? chatHistory[0].content
-                            : "New Conversation";
-                    conversations[currentConversationId] = {
-                        id: currentConversationId,
-                        title: generateConversationTitle(firstMessage),
-                        createdAt: sessionStartTime,
-                        lastActive: Date.now(),
-                        messageCount: chatHistory.length,
-                    };
-                    saveConversations();
-                }
+                            // Show initial mode message
+                            if (chatHistory.length === 0) {
+                                setTimeout(() => {
+                                    addMessage(
+                                        "system",
+                                        `💡 **Welcome to Your Personal AI Assistant!**
 
-                loadConversationList();
-            }
+                                **Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}
 
-            function generateConversationTitle(firstMessage) {
-                if (!firstMessage || firstMessage.length === 0) {
-                    return "New Conversation";
-                }
+                                **Quick Commands:**
+                                • Type \`#zoho\` to switch to Zoho SalesIQ mode
+                                • Type \`#direct\` to switch to Direct LLM mode
+                                • Type \`#zoho Hello\` to switch mode and send message
+                                • Type \`#help\` for more commands
 
-                // Take first 30 characters and clean it up
-                let title = firstMessage.substring(0, 30).trim();
-                if (firstMessage.length > 30) {
-                    title += "...";
-                }
+                                Start chatting or use a command!`,
+                                        false,
+                                        false,
+                                    );
+                                }, 1000);
+                            }
 
-                // Remove line breaks and extra spaces
-                title = title.replace(/\s+/g, " ");
+                            // Auto-resize textarea
+                            messageInput.addEventListener("input", function () {
+                                this.style.height = "auto";
+                                this.style.height = Math.min(this.scrollHeight, 120) + "px";
+                            });
+                        });
 
-                return title || "New Conversation";
-            }
+                        function setupEventListeners() {
+                            // Send message on Enter (but allow Shift+Enter for new lines)
+                            messageInput.addEventListener("keydown", function (e) {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault();
+                                    sendMessage();
+                                }
+                            });
 
-            function saveConversations() {
-                localStorage.setItem(
-                    "conversations",
-                    JSON.stringify(conversations),
-                );
-            }
-            function loadConversationList() {
-                const conversationList =
-                    document.getElementById("conversationList");
-                if (!conversationList) return;
-
-                // Sort conversations by last active time (newest first)
-                const sortedConversations = Object.values(conversations).sort(
-                    (a, b) => b.lastActive - a.lastActive,
-                );
-
-                conversationList.innerHTML = "";
-
-                if (sortedConversations.length === 0) {
-                    conversationList.innerHTML = `
-                    <div class="empty-conversations">
-                        <i class="fas fa-comments"></i>
-                        <div>No conversations yet</div>
-                        <div style="font-size: 0.75rem; margin-top: 0.25rem; opacity: 0.7;">Start chatting to create your first conversation!</div>
-                    </div>
-                `;
-                    return;
-                }
-
-                sortedConversations.forEach((conversation, index) => {
-                    const conversationItem =
-                        createConversationItem(conversation);
-                    // Add staggered animation delay
-                    conversationItem.style.animationDelay = `${index * 0.1}s`;
-                    conversationList.appendChild(conversationItem);
-                });
-            }
-
-            function createConversationItem(conversation) {
-                const item = document.createElement("div");
-                item.className = `conversation-item ${conversation.id === currentConversationId ? "active" : ""}`;
-                item.onclick = () => switchToConversation(conversation.id);
-
-                const timeAgo = getTimeAgo(conversation.lastActive);
-                const messageCount = conversation.messageCount || 0;
-
-                // Create a visual indicator for conversation activity
-                const activityLevel =
-                    messageCount > 10
-                        ? "high"
-                        : messageCount > 5
-                          ? "medium"
-                          : "low";
-                const activityIcon =
-                    messageCount > 10
-                        ? "fas fa-fire"
-                        : messageCount > 5
-                          ? "fas fa-bolt"
-                          : "fas fa-comment";
-
-                item.innerHTML = `
-                <div class="conversation-content">
-                    <div class="conversation-title">${conversation.title}</div>
-                    <div class="conversation-meta">
-                        <span><i class="${activityIcon}"></i> ${messageCount}</span>
-                        <span><i class="fas fa-clock"></i> ${timeAgo}</span>
-                    </div>
-                </div>
-                <div class="conversation-actions">
-                    <button class="conversation-action-btn" onclick="event.stopPropagation(); renameConversation('${conversation.id}')" title="Rename conversation">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="conversation-action-btn" onclick="event.stopPropagation(); deleteConversation('${conversation.id}')" title="Delete conversation">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </div>
-            `;
-
-                return item;
-            }
-
-            function getTimeAgo(timestamp) {
-                const now = Date.now();
-                const diff = now - parseInt(timestamp);
-
-                const minutes = Math.floor(diff / (1000 * 60));
-                const hours = Math.floor(diff / (1000 * 60 * 60));
-                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-                if (minutes < 1) return "Just now";
-                if (minutes < 60) return `${minutes}m ago`;
-                if (hours < 24) return `${hours}h ago`;
-                if (days === 1) return "Yesterday";
-                if (days < 7) return `${days}d ago`;
-
-                return new Date(parseInt(timestamp)).toLocaleDateString();
-            }
-
-            function createNewConversation() {
-                // Save current conversation state
-                updateCurrentConversation();
-
-                // Generate new conversation ID
-                const newConversationId =
-                    "web_" +
-                    Date.now() +
-                    "_" +
-                    Math.random().toString(36).substr(2, 9);
-
-                // Create new conversation
-                conversations[newConversationId] = {
-                    id: newConversationId,
-                    title: "New Conversation",
-                    createdAt: Date.now(),
-                    lastActive: Date.now(),
-                    messageCount: 0,
-                };
-
-                saveConversations();
-                switchToConversation(newConversationId);
-            }
-            function switchToConversation(conversationId) {
-                if (conversationId === currentConversationId) return;
-
-                // Force save current conversation state before switching
-                if (currentConversationId && chatHistory.length > 0) {
-                    saveChatHistory();
-                    updateCurrentConversation();
-                }
-
-                // Switch to new conversation
-                currentConversationId = conversationId;
-                sessionId = conversationId;
-
-                // Update localStorage
-                localStorage.setItem("chatSessionId", sessionId);
-
-                // Load conversation data
-                chatHistory =
-                    JSON.parse(
-                        localStorage.getItem("chatHistory_" + sessionId),
-                    ) || [];
-                sessionStartTime =
-                    localStorage.getItem("sessionStartTime_" + sessionId) ||
-                    conversations[conversationId].createdAt;
-
-                // Reset session message count based on loaded history
-                sessionMessageCount = chatHistory.filter(
-                    (entry) => entry.role === "user",
-                ).length;
-
-                // Clear chat display first
-                chatMessages.innerHTML = "";
-
-                // Load chat history or show welcome message
-                if (chatHistory.length === 0) {
-                    chatMessages.innerHTML = `
-                    <div class="welcome-message">
-                        <div class="welcome-content">
-                            <div class="ai-avatar">🤖</div>
-                            <h3>Welcome to Your Personal AI Assistant!</h3>
-                            <p>I'm ready to help you with a fresh conversation. What would you like to discuss?</p>
-                            <div class="welcome-features">
-                                <span class="feature-tag">🔒 Private</span>
-                                <span class="feature-tag">💾 Memory</span>
-                                <span class="feature-tag">⚡ Fast</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                } else {
-                    loadChatHistory();
-                }
-
-                // Update UI
-                loadConversationList();
-                updateSessionStats();
-
-                // Update conversation last active time
-                conversations[conversationId].lastActive = Date.now();
-                saveConversations();
-            }
-            function updateCurrentConversation() {
-                if (!conversations[currentConversationId]) return;
-
-                // Update conversation metadata
-                conversations[currentConversationId].messageCount =
-                    chatHistory.length;
-                conversations[currentConversationId].lastActive = Date.now();
-
-                // Update title if it's still default and we have messages
-                if (
-                    conversations[currentConversationId].title ===
-                        "New Conversation" &&
-                    chatHistory.length > 0
-                ) {
-                    const firstUserMessage = chatHistory.find(
-                        (msg) => msg.role === "user",
-                    );
-                    if (firstUserMessage) {
-                        conversations[currentConversationId].title =
-                            generateConversationTitle(firstUserMessage.content);
-                    }
-                }
-
-                // Force save conversations
-                saveConversations();
-
-                // Update the conversation list display
-                loadConversationList();
-            }
-
-            function renameConversation(conversationId) {
-                const conversation = conversations[conversationId];
-                if (!conversation) return;
-
-                const newTitle = prompt(
-                    "Enter new conversation name:",
-                    conversation.title,
-                );
-                if (newTitle && newTitle.trim()) {
-                    conversation.title = newTitle.trim();
-                    saveConversations();
-                    loadConversationList();
-                }
-            }
-
-            function deleteConversation(conversationId) {
-                if (Object.keys(conversations).length <= 1) {
-                    alert("Cannot delete the last conversation.");
-                    return;
-                }
-
-                const conversation = conversations[conversationId];
-                if (!conversation) return;
-
-                if (
-                    confirm(
-                        `Delete conversation "${conversation.title}"? This cannot be undone.`,
-                    )
-                ) {
-                    // Remove from localStorage
-                    localStorage.removeItem("chatHistory_" + conversationId);
-                    localStorage.removeItem(
-                        "sessionStartTime_" + conversationId,
-                    );
-
-                    // Remove from conversations
-                    delete conversations[conversationId];
-                    saveConversations();
-
-                    // If deleting current conversation, switch to another
-                    if (conversationId === currentConversationId) {
-                        const remainingConversations =
-                            Object.keys(conversations);
-                        if (remainingConversations.length > 0) {
-                            switchToConversation(remainingConversations[0]);
+                            // Prevent empty form submission
+                            messageInput.addEventListener("keyup", function () {
+                                const hasText = this.value.trim().length > 0;
+                                sendButton.disabled = !hasText || isWaitingForResponse;
+                            });
                         }
-                    } else {
-                        loadConversationList();
-                    }
-                }
-            }
 
-            // Chat History Management
-            function saveChatHistory() {
-                localStorage.setItem(
-                    "chatHistory_" + sessionId,
-                    JSON.stringify(chatHistory),
-                );
-                console.log(
-                    `💾 Saved chat history for ${sessionId}: ${chatHistory.length} messages`,
-                );
-            }
-
-            function addToChatHistory(role, content) {
-                const entry = {
-                    role: role,
-                    content: content,
-                    timestamp: Date.now(),
-                    formatted_time: new Date().toLocaleTimeString(),
-                };
-
-                chatHistory.push(entry);
-
-                // Keep only last 50 messages for memory conservation
-                if (chatHistory.length > 50) {
-                    chatHistory = chatHistory.slice(-50);
-                }
-
-                // Force save immediately
-                saveChatHistory();
-
-                // Update conversation metadata and force save
-                updateCurrentConversation();
-
-                // Debug logging
-                console.log(
-                    `💾 Saved ${role} message to conversation ${currentConversationId}:`,
-                    content.substring(0, 50) + "...",
-                );
-            }
-            function loadChatHistory() {
-                if (chatHistory.length === 0) return;
-
-                console.log(
-                    `📖 Loading chat history for ${sessionId}: ${chatHistory.length} messages`,
-                );
-
-                // Restore messages from history
-                chatHistory.forEach((entry, index) => {
-                    console.log(
-                        `  ${index + 1}. ${entry.role}: ${entry.content.substring(0, 50)}...`,
-                    );
-                    addMessage(entry.role, entry.content, false, false); // Don't save to history again
-                });
-
-                sessionMessageCount = chatHistory.filter(
-                    (entry) => entry.role === "user",
-                ).length;
-                updateSessionStats();
-
-                // Scroll to bottom
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-
-            function clearChatHistory() {
-                if (
-                    confirm(
-                        "Are you sure you want to clear the chat history? This cannot be undone.",
-                    )
-                ) {
-                    chatHistory = [];
-                    localStorage.removeItem("chatHistory_" + sessionId);
-
-                    // Clear the chat display
-                    chatMessages.innerHTML = `
-                    <div class="welcome-message">
-                        <div class="welcome-content">
-                            <div class="ai-avatar">🤖</div>
-                            <h3>Welcome to Your Personal AI Assistant!</h3>
-                            <p>I'm powered by Phi-3 Mini and running privately on your infrastructure. How can I help you today?</p>
-                            <div class="welcome-features">
-                                <span class="feature-tag">🔒 Private</span>
-                                <span class="feature-tag">💾 Memory</span>
-                                <span class="feature-tag">⚡ Fast</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                    sessionMessageCount = 0;
-                    updateSessionStats();
-                }
-            }
-
-            function newChatSession() {
-                if (
-                    confirm(
-                        "Start a new chat session? Current conversation will be saved but a new session will begin.",
-                    )
-                ) {
-                    createNewConversation();
-                }
-            }
-
-            async function sendMessage() {
-                const message = messageInput.value.trim();
-                if (!message || isWaitingForResponse) return;
-
-                // Check for special commands
-                if (handleSpecialCommands(message)) {
-                    return; // Command was handled, don't process as regular message
-                }
-
-                // Clear input and update UI
-                messageInput.value = "";
-                messageInput.style.height = "auto";
-                isWaitingForResponse = true;
-                sendButton.disabled = true;
-
-                // Remove welcome message if present
-                const welcomeMessage =
-                    chatMessages.querySelector(".welcome-message");
-                if (welcomeMessage) {
-                    welcomeMessage.remove();
-                }
-
-                // Add user message
-                addMessage("user", message);
-                sessionMessageCount++;
-                updateSessionStats();
-
-                // Route message based on current mode
-                console.log("📤 Routing message via mode:", currentMode);
-                if (currentMode === "zoho") {
-                    console.log("🔗 Sending to Zoho SalesIQ...");
-                    await sendToZohoSalesIQ(message);
-                } else {
-                    console.log("🤖 Sending to Direct LLM...");
-                    await sendToDirectLLM(message);
-                }
-            }
-
-            function handleSpecialCommands(message) {
-                const messageText = message.toLowerCase().trim();
-                const firstWord = messageText.split(" ")[0];
-
-                console.log(
-                    "🔍 Checking command:",
-                    firstWord,
-                    "in message:",
-                    message,
-                );
-
-                // Check if the first word is a command
-                if (firstWord === "#zoho" || firstWord === "/zoho") {
-                    console.log("✅ Detected Zoho command");
-                    // Clear input and handle command
-                    messageInput.value = "";
-                    messageInput.style.height = "auto";
-                    switchToZohoMode();
-
-                    // If there's additional text after the command, process it in Zoho mode
-                    const remainingText = message
-                        .trim()
-                        .substring(firstWord.length)
-                        .trim();
-                    if (remainingText.length > 0) {
-                        console.log(
-                            "📝 Additional text found, will send:",
-                            remainingText,
-                        );
-                        setTimeout(() => {
-                            messageInput.value = remainingText;
-                            sendMessage();
-                        }, 500); // Small delay to let mode switch complete
-                    }
-                    return true;
-                } else if (
-                    firstWord === "#direct" ||
-                    firstWord === "/direct" ||
-                    firstWord === "#llm" ||
-                    firstWord === "/llm"
-                ) {
-                    console.log("✅ Detected Direct mode command");
-                    messageInput.value = "";
-                    messageInput.style.height = "auto";
-                    switchToDirectMode();
-
-                    // If there's additional text after the command, process it in direct mode
-                    const remainingText = message
-                        .trim()
-                        .substring(firstWord.length)
-                        .trim();
-                    if (remainingText.length > 0) {
-                        console.log(
-                            "📝 Additional text found, will send:",
-                            remainingText,
-                        );
-                        setTimeout(() => {
-                            messageInput.value = remainingText;
-                            sendMessage();
-                        }, 500);
-                    }
-                    return true;
-                } else if (firstWord === "#help" || firstWord === "/help") {
-                    console.log("✅ Detected Help command");
-                    messageInput.value = "";
-                    messageInput.style.height = "auto";
-                    showCommandHelp();
-                    return true;
-                } else if (firstWord === "#status" || firstWord === "/status") {
-                    console.log("✅ Detected Status command");
-                    messageInput.value = "";
-                    messageInput.style.height = "auto";
-                    showSystemStatus();
-                    return true;
-                }
-
-                console.log("❌ No command detected");
-                return false; // Not a special command
-            }
-
-            function switchToZohoMode() {
-                console.log("🔗 Switching to Zoho SalesIQ mode...");
-
-                // Validate configuration before switching
-                const configValid = validateZohoConfiguration();
-                if (!configValid) {
-                    addMessage(
-                        "system",
-                        `⚠️ **Zoho Configuration Issues Detected**
-
-Some configuration issues were found. Check the console for details.
-
-• API endpoint may not be reachable
-• Session configuration may be incomplete
-
-Mode switch proceeding, but functionality may be limited.`,
-                        false,
-                        false,
-                    );
-                }
-
-                currentMode = "zoho";
-                localStorage.setItem("chatMode", "zoho");
-
-                addMessage(
-                    "system",
-                    `🔗 **Switched to Zoho SalesIQ Mode**
-
-Your messages will now be sent through Zoho SalesIQ integration.
-
-• Professional chat interface
-• Zoho widget features enabled
-• Messages routed through SalesIQ webhooks
-• Current API endpoint: ${API_BASE}/webhook/zoho
-
-Type \`#direct\` to switch back to direct LLM mode.`,
-                    false,
-                    false,
-                );
-
-                updateModeIndicator();
-                console.log("✅ Mode switched to Zoho SalesIQ");
-
-                // Try to open Zoho widget if available
-                if (
-                    typeof window.$zoho !== "undefined" &&
-                    window.$zoho.salesiq
-                ) {
-                    try {
-                        window.$zoho.salesiq.chat.start();
-                        console.log("✅ Zoho widget activated");
-                    } catch (e) {
-                        console.log(
-                            "⚠️ Zoho widget not fully loaded yet:",
-                            e.message,
-                        );
-                    }
-                } else {
-                    console.log(
-                        "ℹ️ Zoho widget not detected, using webhook integration",
-                    );
-                }
-
-                // Test webhook connectivity
-                setTimeout(() => {
-                    console.log(
-                        "🔍 Testing webhook connectivity after mode switch...",
-                    );
-                    monitorZohoWebhooks();
-                }, 1000);
-            }
-
-            function switchToDirectMode() {
-                console.log("🤖 Switching to Direct LLM mode...");
-                currentMode = "direct";
-                localStorage.setItem("chatMode", "direct");
-
-                addMessage(
-                    "system",
-                    `🤖 **Switched to Direct LLM Mode**
-
-Your messages will now be sent directly to the Phi-3 Mini model.
-
-• Direct AI processing
-• Faster responses
-• Local model control
-• Full conversation context
-
-Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
-                    false,
-                    false,
-                );
-
-                updateModeIndicator();
-                console.log("✅ Mode switched to Direct LLM");
-            }
-
-            function showCommandHelp() {
-                addMessage(
-                    "system",
-                    `💡 **Available Commands**
-
-**Mode Switching:**
-• \`#zoho\` or \`/zoho\` - Switch to Zoho SalesIQ mode
-• \`#direct\` or \`/direct\` - Switch to Direct LLM mode
-• \`#llm\` or \`/llm\` - Switch to Direct LLM mode
-
-**Smart Commands:**
-• \`#zoho Hello\` - Switch to Zoho mode and send "Hello"
-• \`#direct What is AI?\` - Switch to Direct mode and ask question
-
-**Information:**
-• \`#help\` or \`/help\` - Show this help
-• \`#status\` or \`/status\` - Show system status
-
-**Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}`,
-                    false,
-                    false,
-                );
-            }
-
-            function showSystemStatus() {
-                const zohoStatus =
-                    typeof window.$zoho !== "undefined" && window.$zoho.salesiq
-                        ? "✅ Active"
-                        : "❌ Not Loaded";
-                const apiStatus = statusText.textContent;
-
-                addMessage(
-                    "system",
-                    `📊 **System Status**
-
-**Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}
-**API Status:** ${apiStatus}
-**Zoho Widget:** ${zohoStatus}
-**Session:** ${sessionId.substring(0, 12)}...
-**Messages:** ${chatHistory.length}/50
-**Uptime:** ${Math.floor((Date.now() - sessionStartTime) / 60000)} minutes
-
-**Integration Status:**
-${document.getElementById("integrationStatus").textContent}`,
-                    false,
-                    false,
-                );
-            }
-
-            function updateModeIndicator() {
-                // Update status indicator to show current mode
-                const modeText =
-                    currentMode === "zoho" ? "Zoho Mode" : "Direct Mode";
-                const modeIcon = currentMode === "zoho" ? "🔗" : "🤖";
-
-                // Add mode indicator to header if not exists
-                let modeIndicator = document.getElementById("modeIndicator");
-                if (!modeIndicator) {
-                    modeIndicator = document.createElement("div");
-                    modeIndicator.id = "modeIndicator";
-                    modeIndicator.style.cssText = `
-                        display: flex;
-                        align-items: center;
-                        gap: 0.5rem;
-                        padding: 0.5rem 1rem;
-                        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
-                        border-radius: 20px;
-                        font-size: 0.875rem;
-                        font-weight: 500;
-                        color: var(--primary-color);
-                        border: 1px solid rgba(99, 102, 241, 0.2);
-                    `;
-
-                    const headerContent =
-                        document.querySelector(".header-content");
-                    if (headerContent) {
-                        headerContent.appendChild(modeIndicator);
-                    }
-                }
-
-                modeIndicator.innerHTML = `${modeIcon} ${modeText}`;
-            }
-
-            async function sendToDirectLLM(message) {
-                // Show typing indicator
-                showTypingIndicator();
-
-                try {
-                    const startTime = Date.now();
-                    // Try streaming first for better UX
-                    await sendMessageWithStreaming(message, startTime);
-                } catch (error) {
-                    console.error("Chat error:", error);
-                    hideTypingIndicator();
-                    addMessage(
-                        "assistant",
-                        `Connection error: ${error.message}. Please check if the API server is running.`,
-                        true,
-                    );
-                } finally {
-                    isWaitingForResponse = false;
-                    sendButton.disabled = false;
-                    messageInput.focus();
-                }
-            }
-
-            async function sendToZohoSalesIQ(message) {
-                // Show different typing indicator for Zoho mode
-                showTypingIndicator("Sending via Zoho SalesIQ...");
-
-                try {
-                    // Send message through webhook with proper format
-                    const requestBody = {
-                        message: {
-                            text: message,
-                            timestamp: Date.now(),
-                        },
-                        visitor: {
-                            id: sessionId,
-                            name: "User",
-                            email: "user@example.com",
-                        },
-                        chat: {
-                            sessionId: sessionId,
-                            messageCount: sessionMessageCount,
-                        },
-                    };
-
-                    const response = await fetch(`${API_BASE}/webhook/zoho`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            Accept: "application/json",
-                        },
-                        body: JSON.stringify(requestBody),
-                    });
-
-                    hideTypingIndicator();
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        const parsed = parseZohoResponse(data);
-
-                        console.log(
-                            `📊 Parsed response (${parsed.source}):`,
-                            parsed,
-                        );
-
-                        if (parsed.success) {
-                            addMessage(
-                                "assistant",
-                                `🔗 **[Via Zoho SalesIQ]**\n\n${parsed.message}`,
-                            );
-                            sessionMessageCount++;
-                            updateStats();
-                        } else {
-                            console.error(
-                                "Zoho response parsing failed:",
-                                parsed,
-                            );
-                            addMessage(
-                                "assistant",
-                                `❌ Zoho integration error: ${parsed.error || "Failed to parse response"}`,
-                                true,
-                            );
-
-                            // Log raw data for debugging
-                            if (parsed.rawData) {
-                                console.log(
-                                    "Raw response data:",
-                                    parsed.rawData,
-                                );
+                        async function checkApiHealth() {
+                            try {
+                                const response = await fetch(`${API_BASE}/health`);
+                                const data = await response.json();
+
+                                if (data.status === "healthy") {
+                                    updateStatus("online", "AI Online");
+                                    updateModelInfo(data.model);
+                                } else {
+                                    updateStatus("offline", "AI Offline");
+                                }
+                            } catch (error) {
+                                console.error("Health check failed:", error);
+                                updateStatus("offline", "Connection Error");
                             }
                         }
-                    } else {
-                        const errorText = await response.text();
-                        console.error(
-                            "Zoho webhook error:",
-                            response.status,
-                            errorText,
-                        );
-                        addMessage(
-                            "assistant",
-                            `❌ Failed to connect to Zoho SalesIQ webhook (${response.status})`,
-                            true,
-                        );
-                    }
-                } catch (error) {
-                    hideTypingIndicator();
-                    console.error("Zoho SalesIQ error:", error);
-                    addMessage(
-                        "assistant",
-                        `❌ Zoho SalesIQ error: ${error.message}`,
-                        true,
-                    );
-                } finally {
-                    isWaitingForResponse = false;
-                    sendButton.disabled = false;
-                    messageInput.focus();
-                }
-            }
 
-            async function sendMessageWithStreaming(message, startTime) {
-                let hasHiddenTypingIndicator = false; // Track when to hide typing indicator
+                        function updateStatus(status, text) {
+                            statusDot.className = `status-dot ${status}`;
+                            statusText.textContent = text;
+                        }
+                        function updateModelInfo(model) {
+                            const modelElement = document.getElementById("aiModel");
+                            if (modelElement && model) {
+                                modelElement.textContent = model;
+                            }
+                        }
 
-                try {
-                    const response = await fetch(`${API_BASE}/chat/stream`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-Session-ID": sessionId,
-                        },
-                        body: JSON.stringify({ message: message }),
-                    });
+                        // Conversation Management Functions
+                        function initializeConversations() {
+                            // Ensure current conversation exists in conversations list
+                            if (!conversations[currentConversationId]) {
+                                const firstMessage =
+                                    chatHistory.length > 0
+                                        ? chatHistory[0].content
+                                        : "New Conversation";
+                                conversations[currentConversationId] = {
+                                    id: currentConversationId,
+                                    title: generateConversationTitle(firstMessage),
+                                    createdAt: sessionStartTime,
+                                    lastActive: Date.now(),
+                                    messageCount: chatHistory.length,
+                                };
+                                saveConversations();
+                            }
 
-                    if (!response.ok) {
-                        throw new Error(
-                            `HTTP ${response.status}: ${response.statusText}`,
-                        );
-                    }
+                            loadConversationList();
+                        }
 
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
-                    let currentMessageDiv = null;
-                    let currentContentDiv = null;
-                    let buffer = "";
+                        function generateConversationTitle(firstMessage) {
+                            if (!firstMessage || firstMessage.length === 0) {
+                                return "New Conversation";
+                            }
 
-                    while (true) {
-                        const { done, value } = await reader.read();
+                            // Take first 30 characters and clean it up
+                            let title = firstMessage.substring(0, 30).trim();
+                            if (firstMessage.length > 30) {
+                                title += "...";
+                            }
 
-                        if (done) break;
+                            // Remove line breaks and extra spaces
+                            title = title.replace(/\s+/g, " ");
 
-                        buffer += decoder.decode(value, { stream: true });
-                        const lines = buffer.split("\n");
-                        buffer = lines.pop() || ""; // Keep incomplete line in buffer
-                        for (const line of lines) {
-                            if (line.startsWith("data: ")) {
-                                try {
-                                    const data = JSON.parse(line.slice(6));
+                            return title || "New Conversation";
+                        }
 
-                                    if (data.status === "processing") {
-                                        // Update typing indicator
-                                        const typingText =
-                                            document.querySelector(
-                                                ".typing-text",
-                                            );
-                                        if (typingText) {
-                                            typingText.textContent =
-                                                data.message;
+                        function saveConversations() {
+                            localStorage.setItem(
+                                "conversations",
+                                JSON.stringify(conversations),
+                            );
+                        }
+                        function loadConversationList() {
+                            const conversationList =
+                                document.getElementById("conversationList");
+                            if (!conversationList) return;
+
+                            // Sort conversations by last active time (newest first)
+                            const sortedConversations = Object.values(conversations).sort(
+                                (a, b) => b.lastActive - a.lastActive,
+                            );
+
+                            conversationList.innerHTML = "";
+
+                            if (sortedConversations.length === 0) {
+                                conversationList.innerHTML = `
+                                            <div class="empty-conversations">
+                                                <i class="fas fa-comments"></i>
+                                                <div>No conversations yet</div>
+                                                <div style="font-size: 0.75rem; margin-top: 0.25rem; opacity: 0.7;">Start chatting to create your first conversation!</div>
+                                            </div>
+                                        `;
+                                return;
+                            }
+
+                            sortedConversations.forEach((conversation, index) => {
+                                const conversationItem =
+                                    createConversationItem(conversation);
+                                // Add staggered animation delay
+                                conversationItem.style.animationDelay = `${index * 0.1}s`;
+                                conversationList.appendChild(conversationItem);
+                            });
+                        }
+
+                        function createConversationItem(conversation) {
+                            const item = document.createElement("div");
+                            item.className = `conversation-item ${conversation.id === currentConversationId ? "active" : ""}`;
+                            item.onclick = () => switchToConversation(conversation.id);
+
+                            const timeAgo = getTimeAgo(conversation.lastActive);
+                            const messageCount = conversation.messageCount || 0;
+
+                            // Create a visual indicator for conversation activity
+                            const activityLevel =
+                                messageCount > 10
+                                    ? "high"
+                                    : messageCount > 5
+                                      ? "medium"
+                                      : "low";
+                            const activityIcon =
+                                messageCount > 10
+                                    ? "fas fa-fire"
+                                    : messageCount > 5
+                                      ? "fas fa-bolt"
+                                      : "fas fa-comment";
+
+                            item.innerHTML = `
+                                        <div class="conversation-content">
+                                            <div class="conversation-title">${conversation.title}</div>
+                                            <div class="conversation-meta">
+                                                <span><i class="${activityIcon}"></i> ${messageCount}</span>
+                                                <span><i class="fas fa-clock"></i> ${timeAgo}</span>
+                                            </div>
+                                        </div>
+                                        <div class="conversation-actions">
+                                            <button class="conversation-action-btn" onclick="event.stopPropagation(); renameConversation('${conversation.id}')" title="Rename conversation">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="conversation-action-btn" onclick="event.stopPropagation(); deleteConversation('${conversation.id}')" title="Delete conversation">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    `;
+
+                            return item;
+                        }
+
+                        function getTimeAgo(timestamp) {
+                            const now = Date.now();
+                            const diff = now - parseInt(timestamp);
+
+                            const minutes = Math.floor(diff / (1000 * 60));
+                            const hours = Math.floor(diff / (1000 * 60 * 60));
+                            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+                            if (minutes < 1) return "Just now";
+                            if (minutes < 60) return `${minutes}m ago`;
+                            if (hours < 24) return `${hours}h ago`;
+                            if (days === 1) return "Yesterday";
+                            if (days < 7) return `${days}d ago`;
+
+                            return new Date(parseInt(timestamp)).toLocaleDateString();
+                        }
+
+                        function createNewConversation() {
+                            // Save current conversation state
+                            updateCurrentConversation();
+
+                            // Generate new conversation ID
+                            const newConversationId =
+                                "web_" +
+                                Date.now() +
+                                "_" +
+                                Math.random().toString(36).substr(2, 9);
+
+                            // Create new conversation
+                            conversations[newConversationId] = {
+                                id: newConversationId,
+                                title: "New Conversation",
+                                createdAt: Date.now(),
+                                lastActive: Date.now(),
+                                messageCount: 0,
+                            };
+
+                            saveConversations();
+                            switchToConversation(newConversationId);
+                        }
+                        function switchToConversation(conversationId) {
+                            if (conversationId === currentConversationId) return;
+
+                            // Force save current conversation state before switching
+                            if (currentConversationId && chatHistory.length > 0) {
+                                saveChatHistory();
+                                updateCurrentConversation();
+                            }
+
+                            // Switch to new conversation
+                            currentConversationId = conversationId;
+                            sessionId = conversationId;
+
+                            // Update localStorage
+                            localStorage.setItem("chatSessionId", sessionId);
+
+                            // Load conversation data
+                            chatHistory =
+                                JSON.parse(
+                                    localStorage.getItem("chatHistory_" + sessionId),
+                                ) || [];
+                            sessionStartTime =
+                                localStorage.getItem("sessionStartTime_" + sessionId) ||
+                                conversations[conversationId].createdAt;
+
+                            // Reset session message count based on loaded history
+                            sessionMessageCount = chatHistory.filter(
+                                (entry) => entry.role === "user",
+                            ).length;
+
+                            // Clear chat display first
+                            chatMessages.innerHTML = "";
+
+                            // Validate configuration before switching
+                            const configValid = validateZohoConfiguration();
+                            if (!configValid) {
+                                addMessage(
+                                    "system",
+                                    `⚠️ **Zoho Configuration Issues Detected**
+
+            Some configuration issues were found. Check the console for details.
+
+            • API endpoint may not be reachable
+            • Session configuration may be incomplete
+
+            Mode switch proceeding, but functionality may be limited.`,
+                                    false,
+                                    false,
+                                );
+                            }
+
+                        function addToChatHistory(role, content) {
+                            const entry = {
+                                role: role,
+                                content: content,
+                                timestamp: Date.now(),
+                                formatted_time: new Date().toLocaleTimeString(),
+                            };
+
+                            chatHistory.push(entry);
+
+                            // Keep only last 50 messages for memory conservation
+                            if (chatHistory.length > 50) {
+                                chatHistory = chatHistory.slice(-50);
+                            }
+
+                            // Force save immediately
+                            saveChatHistory();
+
+                            // Update conversation metadata and force save
+                            updateCurrentConversation();
+
+                            // Debug logging
+                            console.log(
+                                `💾 Saved ${role} message to conversation ${currentConversationId}:`,
+                                content.substring(0, 50) + "...",
+                            );
+                        }
+                        function loadChatHistory() {
+                            if (chatHistory.length === 0) return;
+
+                            console.log(
+                                `📖 Loading chat history for ${sessionId}: ${chatHistory.length} messages`,
+                            );
+
+                            // Restore messages from history
+                            chatHistory.forEach((entry, index) => {
+                                console.log(
+                                    `  ${index + 1}. ${entry.role}: ${entry.content.substring(0, 50)}...`,
+                                );
+                                addMessage(entry.role, entry.content, false, false); // Don't save to history again
+                            });
+
+                            sessionMessageCount = chatHistory.filter(
+                                (entry) => entry.role === "user",
+                            ).length;
+                            updateSessionStats();
+
+                            // Scroll to bottom
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+
+                        function clearChatHistory() {
+                            if (
+                                confirm(
+                                    "Are you sure you want to clear the chat history? This cannot be undone.",
+                                )
+                            ) {
+                                chatHistory = [];
+                                localStorage.removeItem("chatHistory_" + sessionId);
+
+                                    function addToChatHistory(role, content) {
+                                        const entry = {
+                                            role: role,
+                                            content: content,
+                                            timestamp: Date.now(),
+                                            formatted_time: new Date().toLocaleTimeString(),
+                                        };
+
+                                        chatHistory.push(entry);
+
+                                        // Keep only last 50 messages for memory conservation
+                                        if (chatHistory.length > 50) {
+                                            chatHistory = chatHistory.slice(-50);
                                         }
-                                    } else if (data.status === "streaming") {
-                                        // Hide typing indicator when first streaming content arrives
-                                        if (!hasHiddenTypingIndicator) {
-                                            hideTypingIndicator();
-                                            hasHiddenTypingIndicator = true;
-                                        }
 
-                                        // Create or update streaming message
-                                        if (!currentMessageDiv) {
-                                            currentMessageDiv =
-                                                document.createElement("div");
-                                            currentMessageDiv.className =
-                                                "message assistant";
+                                        // Force save immediately
+                                        saveChatHistory();
 
-                                            currentContentDiv =
-                                                document.createElement("div");
-                                            currentContentDiv.className =
-                                                "message-content";
-
-                                            const metaDiv =
-                                                document.createElement("div");
-                                            metaDiv.className = "message-meta";
-                                            metaDiv.textContent =
-                                                new Date().toLocaleTimeString();
-
-                                            currentMessageDiv.appendChild(
-                                                currentContentDiv,
-                                            );
-                                            currentMessageDiv.appendChild(
-                                                metaDiv,
-                                            );
-                                            chatMessages.appendChild(
-                                                currentMessageDiv,
-                                            );
-                                        }
-
-                                        // Update content with streaming text
-                                        if (currentContentDiv) {
-                                            const formattedText = formatMessage(
-                                                data.full_response || "",
-                                            );
-                                            currentContentDiv.innerHTML =
-                                                formattedText +
-                                                '<span class="typing-cursor">|</span>';
-                                            chatMessages.scrollTop =
-                                                chatMessages.scrollHeight;
-                                        }
-                                    } else if (data.status === "complete") {
-                                        // Finalize the message
-                                        if (currentContentDiv) {
-                                            const formattedText = formatMessage(
-                                                data.full_response,
-                                            );
-                                            currentContentDiv.innerHTML =
-                                                formattedText;
-
-                                            // Remove typing cursor
-                                            const cursor =
-                                                currentContentDiv.querySelector(
-                                                    ".typing-cursor",
-                                                );
-                                            if (cursor) cursor.remove();
-                                        }
-
-                                        // Update stats
-                                        const endTime = Date.now();
-                                        lastResponseTime = endTime - startTime;
-                                        sessionMessageCount++;
-                                        updateStats();
-
-                                        // Save to history manually (since streaming doesn't go through addMessage)
-                                        addToChatHistory(
-                                            "assistant",
-                                            data.full_response,
-                                        );
-
-                                        // Update conversation metadata immediately
+                                        // Update conversation metadata and force save
                                         updateCurrentConversation();
 
-                                        break;
-                                    } else if (data.status === "error") {
-                                        hideTypingIndicator();
+            **Smart Commands:**
+            • \`#zoho Hello\` - Switch to Zoho mode and send "Hello"
+            • \`#direct What is AI?\` - Switch to Direct mode and ask question
+
+            **Information:**
+            • \`#help\` or \`/help\` - Show this help
+            • \`#status\` or \`/status\` - Show system status
+
+            **Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}`,
+                                false,
+                                false,
+                            );
+                        }
+
+                        function showSystemStatus() {
+                            const zohoStatus =
+                                typeof window.$zoho !== "undefined" && window.$zoho.salesiq
+                                    ? "✅ Active"
+                                    : "❌ Not Loaded";
+                            const apiStatus = statusText.textContent;
+
+                            addMessage(
+                                "system",
+                                `📊 **System Status**
+
+            **Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}
+            **API Status:** ${apiStatus}
+            **Zoho Widget:** ${zohoStatus}
+            **Session:** ${sessionId.substring(0, 12)}...
+            **Messages:** ${chatHistory.length}/50
+            **Uptime:** ${Math.floor((Date.now() - sessionStartTime) / 60000)} minutes
+
+            **Integration Status:**
+            ${document.getElementById("integrationStatus").textContent}`,
+                                false,
+                                false,
+                            );
+                        }
+
+                        function updateModeIndicator() {
+                            // Update status indicator to show current mode
+                            const modeText =
+                                currentMode === "zoho" ? "Zoho Mode" : "Direct Mode";
+                            const modeIcon = currentMode === "zoho" ? "🔗" : "🤖";
+
+                            // Add mode indicator to header if not exists
+                            let modeIndicator = document.getElementById("modeIndicator");
+                            if (!modeIndicator) {
+                                modeIndicator = document.createElement("div");
+                                modeIndicator.id = "modeIndicator";
+                                modeIndicator.style.cssText = `
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 0.5rem;
+                                    padding: 0.5rem 1rem;
+                                    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+                                    border-radius: 20px;
+                                    font-size: 0.875rem;
+                                    font-weight: 500;
+                                    color: var(--primary-color);
+                                    border: 1px solid rgba(99, 102, 241, 0.2);
+                                `;
+
+                                const headerContent =
+                                    document.querySelector(".header-content");
+                                if (headerContent) {
+                                    headerContent.appendChild(modeIndicator);
+                                }
+                            }
+
+                            modeIndicator.innerHTML = `${modeIcon} ${modeText}`;
+                        }
+
+                        async function sendToDirectLLM(message) {
+                            // Show typing indicator
+                            showTypingIndicator();
+
+                            try {
+                                const startTime = Date.now();
+                                // Try streaming first for better UX
+                                await sendMessageWithStreaming(message, startTime);
+                            } catch (error) {
+                                console.error("Chat error:", error);
+                                hideTypingIndicator();
+                                addMessage(
+                                    "assistant",
+                                    `Connection error: ${error.message}. Please check if the API server is running.`,
+                                    true,
+                                );
+                            } finally {
+                                isWaitingForResponse = false;
+                                sendButton.disabled = false;
+                                messageInput.focus();
+                            }
+                        }
+
+                        async function sendToZohoSalesIQ(message) {
+                            // Show different typing indicator for Zoho mode
+                            showTypingIndicator("Sending via Zoho SalesIQ...");
+
+                            try {
+                                // Send message through webhook with proper format
+                                const requestBody = {
+                                    message: {
+                                        text: message,
+                                        timestamp: Date.now(),
+                                    },
+                                    visitor: {
+                                        id: sessionId,
+                                        name: "User",
+                                        email: "user@example.com",
+                                    },
+                                    chat: {
+                                        sessionId: sessionId,
+                                        messageCount: sessionMessageCount,
+                                    },
+                                };
+
+                                const response = await fetch(`${API_BASE}/webhook/zoho`, {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        Accept: "application/json",
+                                    },
+                                    body: JSON.stringify(requestBody),
+                                });
+
+                                hideTypingIndicator();
+
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    const parsed = parseZohoResponse(data);
+
+                                    console.log(
+                                        `📊 Parsed response (${parsed.source}):`,
+                                        parsed,
+                                    );
+
+                                    if (parsed.success) {
                                         addMessage(
                                             "assistant",
-                                            `Error: ${data.error}`,
+                                            `🔗 **[Via Zoho SalesIQ]**\n\n${parsed.message}`,
+                                        );
+                                        sessionMessageCount++;
+                                        updateStats();
+                                    } else {
+                                        console.error(
+                                            "Zoho response parsing failed:",
+                                            parsed,
+                                        );
+                                        addMessage(
+                                            "assistant",
+                                            `❌ Zoho integration error: ${parsed.error || "Failed to parse response"}`,
                                             true,
                                         );
-                                        break;
+
+                                        // Log raw data for debugging
+                                        if (parsed.rawData) {
+                                            console.log(
+                                                "Raw response data:",
+                                                parsed.rawData,
+                                            );
+                                        }
+                                    } catch (jsonError) {
+                                        console.error(
+                                            "Failed to parse JSON response:",
+                                            jsonError,
+                                        );
+                                        const responseText = await response.text();
+                                        addMessage(
+                                            "assistant",
+                                            `❌ Zoho webhook returned invalid JSON response. Server may not be configured correctly.`,
+                                            true,
+                                        );
                                     }
-                                } catch (e) {
-                                    console.warn(
-                                        "Failed to parse SSE data:",
-                                        line,
-                                        e,
+                                } else {
+                                    const errorText = await response.text();
+                                    console.error(
+                                        "Zoho webhook error:",
+                                        response.status,
+                                        errorText,
                                     );
+                                    addMessage(
+                                        "assistant",
+                                        `❌ Failed to connect to Zoho SalesIQ webhook (${response.status})`,
+                                        true,
+                                    );
+                                }
+                            } catch (error) {
+                                hideTypingIndicator();
+                                console.error("Zoho SalesIQ error:", error);
+                                addMessage(
+                                    "assistant",
+                                    `❌ Zoho SalesIQ error: ${error.message}`,
+                                    true,
+                                );
+                            } finally {
+                                isWaitingForResponse = false;
+                                sendButton.disabled = false;
+                                messageInput.focus();
+                            }
+                        }
+
+                                            if (response.ok) {
+                                                try {
+                                                    const data = await response.json();
+                                                    const parsed = parseZohoResponse(data);
+
+                                                    console.log(
+                                                        `📊 Parsed response (${parsed.source}):`,
+                                                        parsed,
+                                                    );
+
+                                                    if (parsed.success) {
+                                                        addMessage(
+                                                            "assistant",
+                                                            `🔗 **[Via Zoho SalesIQ]**\n\n${parsed.message}`,
+                                                        );
+                                                        sessionMessageCount++;
+                                                        updateStats();
+                                                    } else {
+                                                        console.error(
+                                                            "Zoho response parsing failed:",
+                                                            parsed,
+                                                        );
+                                                        addMessage(
+                                                            "assistant",
+                                                            `❌ Zoho integration error: ${parsed.error || "Failed to parse response"}`,
+                                                            true,
+                                                        );
+
+                                                        // Log raw data for debugging
+                                                        if (parsed.rawData) {
+                                                            console.log(
+                                                                "Raw response data:",
+                                                                parsed.rawData,
+                                                            );
+                                                        }
+                                                    }
+                                                } catch (jsonError) {
+                                                    console.error("Failed to parse JSON response:", jsonError);
+                                                    const responseText = await response.text();
+                                                    addMessage(
+                                                        "assistant",
+                                                        `❌ Zoho webhook returned invalid JSON response. Server may not be configured correctly.`,
+                                                        true,
+                                                    );
+                                                }
+                                            } else if (response.status === 404) {
+                                                addMessage(
+                                                    "assistant",
+                                                    `❌ **Zoho webhook endpoint not found (404)**
+
+                        The webhook endpoint \`/webhook/zoho\` does not exist on the server.
+
+                        **To fix this:**
+                        1. Configure the webhook endpoint on your server
+                        2. Or switch to direct LLM mode with \`#direct\`
+                        3. Or update the API_BASE URL to point to a working endpoint`,
+                                        true,
+                                    );
+                                } else {
+                                    const errorText = await response.text();
+                                    console.error(
+                                        "Zoho webhook error:",
+                                        response.status,
+                                        errorText.substring(0, 200),
+                                    );
+                                    addMessage(
+                                        "assistant",
+                                        `❌ Failed to connect to Zoho SalesIQ webhook (${response.status})
+
+                        Server returned: ${response.status === 500 ? "Internal Server Error" : "HTTP " + response.status}
+
+                        Try switching to direct mode with \`#direct\` or check server configuration.`,
+                                        true,
+                                    );
+                                }
+                            } catch (error) {
+                                hideTypingIndicator();
+                                console.error("Zoho SalesIQ error:", error);
+                                addMessage(
+                                    "assistant",
+                                    `❌ Zoho SalesIQ error: ${error.message}`,
+                                    true,
+                                );
+                            } finally {
+                                isWaitingForResponse = false;
+                                sendButton.disabled = false;
+                                messageInput.focus();
+                            }
+                        }
+
+                        async function sendMessageWithStreaming(message, startTime) {
+                            let hasHiddenTypingIndicator = false; // Track when to hide typing indicator
+
+                            try {
+                                const response = await fetch(`${API_BASE}/chat/stream`, {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        "X-Session-ID": sessionId,
+                                    },
+                                    body: JSON.stringify({ message: message }),
+                                });
+
+                                if (!response.ok) {
+                                    throw new Error(
+                                        `HTTP ${response.status}: ${response.statusText}`,
+                                    );
+                                }
+
+                                const reader = response.body.getReader();
+                                const decoder = new TextDecoder();
+                                let currentMessageDiv = null;
+                                let currentContentDiv = null;
+                                let buffer = "";
+
+                                while (true) {
+                                    const { done, value } = await reader.read();
+
+                                    if (done) break;
+
+                                    buffer += decoder.decode(value, { stream: true });
+                                    const lines = buffer.split("\n");
+                                    buffer = lines.pop() || ""; // Keep incomplete line in buffer
+                                    for (const line of lines) {
+                                        if (line.startsWith("data: ")) {
+                                            try {
+                                                const data = JSON.parse(line.slice(6));
+
+                                                if (data.status === "processing") {
+                                                    // Update typing indicator
+                                                    const typingText =
+                                                        document.querySelector(
+                                                            ".typing-text",
+                                                        );
+                                                    if (typingText) {
+                                                        typingText.textContent =
+                                                            data.message;
+                                                    }
+                                                } else if (data.status === "streaming") {
+                                                    // Hide typing indicator when first streaming content arrives
+                                                    if (!hasHiddenTypingIndicator) {
+                                                        hideTypingIndicator();
+                                                        hasHiddenTypingIndicator = true;
+                                                    }
+
+                                                    // Create or update streaming message
+                                                    if (!currentMessageDiv) {
+                                                        currentMessageDiv =
+                                                            document.createElement("div");
+                                                        currentMessageDiv.className =
+                                                            "message assistant";
+
+                                                        currentContentDiv =
+                                                            document.createElement("div");
+                                                        currentContentDiv.className =
+                                                            "message-content";
+
+                                                        const metaDiv =
+                                                            document.createElement("div");
+                                                        metaDiv.className = "message-meta";
+                                                        metaDiv.textContent =
+                                                            new Date().toLocaleTimeString();
+
+                                                        currentMessageDiv.appendChild(
+                                                            currentContentDiv,
+                                                        );
+                                                        currentMessageDiv.appendChild(
+                                                            metaDiv,
+                                                        );
+                                                        chatMessages.appendChild(
+                                                            currentMessageDiv,
+                                                        );
+                                                    }
+
+                                                    // Update content with streaming text
+                                                    if (currentContentDiv) {
+                                                        const formattedText = formatMessage(
+                                                            data.full_response || "",
+                                                        );
+                                                        currentContentDiv.innerHTML =
+                                                            formattedText +
+                                                            '<span class="typing-cursor">|</span>';
+                                                        chatMessages.scrollTop =
+                                                            chatMessages.scrollHeight;
+                                                    }
+                                                } else if (data.status === "complete") {
+                                                    // Finalize the message
+                                                    if (currentContentDiv) {
+                                                        const formattedText = formatMessage(
+                                                            data.full_response,
+                                                        );
+                                                        currentContentDiv.innerHTML =
+                                                            formattedText;
+
+                                                        // Remove typing cursor
+                                                        const cursor =
+                                                            currentContentDiv.querySelector(
+                                                                ".typing-cursor",
+                                                            );
+                                                        if (cursor) cursor.remove();
+                                                    }
+
+                                                    // Update stats
+                                                    const endTime = Date.now();
+                                                    lastResponseTime = endTime - startTime;
+                                                    sessionMessageCount++;
+                                                    updateStats();
+
+                                                    // Save to history manually (since streaming doesn't go through addMessage)
+                                                    addToChatHistory(
+                                                        "assistant",
+                                                        data.full_response,
+                                                    );
+
+                                                    // Update conversation metadata immediately
+                                                    updateCurrentConversation();
+
+                                                    break;
+                                                } else if (data.status === "error") {
+                                                    hideTypingIndicator();
+                                                    addMessage(
+                                                        "assistant",
+                                                        `Error: ${data.error}`,
+                                                        true,
+                                                    );
+                                                    break;
+                                                }
+                                            } catch (e) {
+                                                console.warn(
+                                                    "Failed to parse SSE data:",
+                                                    line,
+                                                    e,
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (error) {
+                                // Ensure typing indicator is hidden before fallback
+                                if (!hasHiddenTypingIndicator) {
+                                    hideTypingIndicator();
+                                }
+
+                                // Fallback to regular endpoint
+                                console.warn(
+                                    "Streaming failed, falling back to regular endpoint:",
+                                    error,
+                                );
+                                await sendMessageFallback(message, startTime);
+                            }
+                        }
+
+                        async function sendMessageFallback(message, startTime) {
+                            try {
+                                const response = await fetch(`${API_BASE}/chat`, {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        "X-Session-ID": sessionId,
+                                    },
+                                    body: JSON.stringify({ message: message }),
+                                });
+
+                                const endTime = Date.now();
+                                lastResponseTime = endTime - startTime;
+
+                                hideTypingIndicator();
+
+                                if (!response.ok) {
+                                    throw new Error(
+                                        `HTTP ${response.status}: ${response.statusText}`,
+                                    );
+                                }
+
+                                const data = await response.json();
+
+                                if (data.success) {
+                                    addMessage("assistant", data.response);
+                                    sessionMessageCount++;
+                                    updateStats();
+                                } else {
+                                    addMessage(
+                                        "assistant",
+                                        `Error: ${data.error || "Unknown error occurred"}`,
+                                        true,
+                                    );
+                                }
+                            } catch (error) {
+                                hideTypingIndicator();
+                                throw error; // Re-throw to be handled by the main function
+                            }
+                        }
+
+                        function addMessage(
+                            sender,
+                            text,
+                            isError = false,
+                            saveToHistory = true,
+                        ) {
+                            const messageDiv = document.createElement("div");
+                            messageDiv.className = `message ${sender}`;
+
+                            const contentDiv = document.createElement("div");
+                            contentDiv.className = "message-content";
+                            if (isError) {
+                                contentDiv.style.background = "#fef2f2";
+                                contentDiv.style.borderColor = "#fecaca";
+                                contentDiv.style.color = "#dc2626";
+                            } else if (sender === "system") {
+                                contentDiv.style.background =
+                                    "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)";
+                                contentDiv.style.borderColor = "rgba(99, 102, 241, 0.3)";
+                                contentDiv.style.color = "var(--text-primary)";
+                            }
+
+                            // Format text (basic markdown-like formatting)
+                            const formattedText = formatMessage(text);
+                            contentDiv.innerHTML = formattedText;
+
+                            const metaDiv = document.createElement("div");
+                            metaDiv.className = "message-meta";
+                            metaDiv.textContent = new Date().toLocaleTimeString();
+
+                            messageDiv.appendChild(contentDiv);
+                            messageDiv.appendChild(metaDiv);
+                            chatMessages.appendChild(messageDiv);
+
+                            // Save to chat history (unless explicitly disabled or system message)
+                            if (saveToHistory && !isError && sender !== "system") {
+                                addToChatHistory(sender, text);
+                            }
+
+                            // Scroll to bottom
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+
+                        function formatMessage(text) {
+                            // Basic formatting: convert **bold** and *italic*
+                            return text
+                                .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                                .replace(/\*(.*?)\*/g, "<em>$1</em>")
+                                .replace(/\n/g, "<br>");
+                        }
+
+                        function showTypingIndicator(customText = null) {
+                            const typingDiv = document.createElement("div");
+                            typingDiv.className = "typing-indicator";
+                            typingDiv.id = "typingIndicator";
+
+                            // Create dots
+                            for (let i = 0; i < 3; i++) {
+                                const dot = document.createElement("div");
+                                dot.className = "typing-dot";
+                                typingDiv.appendChild(dot);
+                            }
+
+                            // Add helpful text
+                            const textDiv = document.createElement("div");
+                            textDiv.className = "typing-text";
+                            textDiv.textContent =
+                                customText ||
+                                (currentMode === "zoho"
+                                    ? "Zoho SalesIQ processing..."
+                                    : "AI is thinking...");
+                            textDiv.style.fontSize = "0.75rem";
+                            textDiv.style.color = "var(--text-secondary)";
+                            textDiv.style.marginLeft = "8px";
+                            typingDiv.appendChild(textDiv);
+
+                            chatMessages.appendChild(typingDiv);
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                            // Progressive messages for longer waits (only for direct mode)
+                            if (currentMode === "direct" && !customText) {
+                                setTimeout(() => {
+                                    const currentTyping =
+                                        document.getElementById("typingIndicator");
+                                    if (currentTyping) {
+                                        const textElement =
+                                            currentTyping.querySelector(".typing-text");
+                                        if (textElement) {
+                                            textElement.textContent =
+                                                "Processing complex request...";
+                                        }
+                                    }
+                                }, 10000); // After 10 seconds
+
+                                setTimeout(() => {
+                                    const currentTyping =
+                                        document.getElementById("typingIndicator");
+                                    if (currentTyping) {
+                                        const textElement =
+                                            currentTyping.querySelector(".typing-text");
+                                        if (textElement) {
+                                            textElement.textContent =
+                                                "AI model is working hard (up to 10 minutes for complex queries)...";
+                                        }
+                                    }
+                                }, 30000); // After 30 seconds
+
+                                setTimeout(() => {
+                                    const currentTyping =
+                                        document.getElementById("typingIndicator");
+                                    if (currentTyping) {
+                                        const textElement =
+                                            currentTyping.querySelector(".typing-text");
+                                        if (textElement) {
+                                            textElement.textContent =
+                                                "Almost ready, complex analysis takes time...";
+                                        }
+                                    }
+                                }, 120000); // After 2 minutes
+
+                                setTimeout(() => {
+                                    const currentTyping =
+                                        document.getElementById("typingIndicator");
+                                    if (currentTyping) {
+                                        const textElement =
+                                            currentTyping.querySelector(".typing-text");
+                                        if (textElement) {
+                                            textElement.textContent =
+                                                "Still processing - this is a really complex question!";
+                                        }
+                                    }
+                                }, 300000); // After 5 minutes
+                            }
+                        }
+
+                        function hideTypingIndicator() {
+                            const typingIndicator =
+                                document.getElementById("typingIndicator");
+                            if (typingIndicator) {
+                                typingIndicator.remove();
+                            }
+                        }
+
+                        function clearChat() {
+                            if (
+                                confirm(
+                                    "Are you sure you want to clear the chat? This cannot be undone.",
+                                )
+                            ) {
+                                chatMessages.innerHTML = `
+                                            <div class="welcome-message">
+                                                <i class="fas fa-comments"></i>
+                                                <h3>Chat cleared! Ready for a new conversation.</h3>
+                                                <p>Start a conversation by typing a message below.</p>
+                                            </div>
+                                        `;
+
+                                // Reset session
+                                sessionId =
+                                    "web_" +
+                                    Date.now() +
+                                    "_" +
+                                    Math.random().toString(36).substr(2, 9);
+                                sessionMessageCount = 0;
+                                updateSessionStats();
+                                messageInput.focus();
+                            }
+                        }
+
+                        function updateSessionStats() {
+                            const sessionElement =
+                                document.getElementById("sessionMessages");
+                            if (sessionElement) {
+                                sessionElement.textContent = sessionMessageCount;
+                            }
+
+                            // Update memory indicator
+                            updateMemoryIndicator();
+                        }
+
+                        function updateMemoryIndicator() {
+                            const memoryCount = document.getElementById("memoryCount");
+                            const memoryFill = document.getElementById("memoryFill");
+
+                            if (memoryCount && memoryFill) {
+                                const currentCount = chatHistory.length;
+                                const maxCount = 50;
+                                const percentage = (currentCount / maxCount) * 100;
+
+                                memoryCount.textContent = `${currentCount}/${maxCount}`;
+                                memoryFill.style.width = `${percentage}%`;
+
+                                // Change color based on usage
+                                if (percentage > 90) {
+                                    memoryFill.style.background = "var(--error-color)";
+                                } else if (percentage > 70) {
+                                    memoryFill.style.background = "var(--warning-color)";
+                                } else {
+                                    memoryFill.style.background = "var(--gradient-primary)";
                                 }
                             }
                         }
-                    }
-                } catch (error) {
-                    // Ensure typing indicator is hidden before fallback
-                    if (!hasHiddenTypingIndicator) {
-                        hideTypingIndicator();
-                    }
 
-                    // Fallback to regular endpoint
-                    console.warn(
-                        "Streaming failed, falling back to regular endpoint:",
-                        error,
-                    );
-                    await sendMessageFallback(message, startTime);
-                }
-            }
+                        function showSessionInfo() {
+                            const sessionDuration = Date.now() - parseInt(sessionStartTime);
+                            const hours = Math.floor(sessionDuration / (1000 * 60 * 60));
+                            const minutes = Math.floor(
+                                (sessionDuration % (1000 * 60 * 60)) / (1000 * 60),
+                            );
 
-            async function sendMessageFallback(message, startTime) {
-                try {
-                    const response = await fetch(`${API_BASE}/chat`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-Session-ID": sessionId,
-                        },
-                        body: JSON.stringify({ message: message }),
-                    });
+                            const info = `
+                        Session Information:
+                        ━━━━━━━━━━━━━━━━━━━━
 
-                    const endTime = Date.now();
-                    lastResponseTime = endTime - startTime;
+                        📋 Session ID: ${sessionId}
+                        ⏰ Duration: ${hours}h ${minutes}m
+                        💬 Messages: ${chatHistory.length}/50
+                        📊 User Messages: ${chatHistory.filter((m) => m.role === "user").length}
+                        🤖 AI Responses: ${chatHistory.filter((m) => m.role === "assistant").length}
+                        🕒 Started: ${new Date(parseInt(sessionStartTime)).toLocaleString()}
+                        ⚡ Last Response: ${lastResponseTime}ms
 
-                    hideTypingIndicator();
+                        🧠 Memory Management:
+                        • Automatically keeps last 50 messages
+                        • Older messages are archived locally
+                        • Session persists across browser sessions
+                                    `.trim();
 
-                    if (!response.ok) {
-                        throw new Error(
-                            `HTTP ${response.status}: ${response.statusText}`,
-                        );
-                    }
-
-                    const data = await response.json();
-
-                    if (data.success) {
-                        addMessage("assistant", data.response);
-                        sessionMessageCount++;
-                        updateStats();
-                    } else {
-                        addMessage(
-                            "assistant",
-                            `Error: ${data.error || "Unknown error occurred"}`,
-                            true,
-                        );
-                    }
-                } catch (error) {
-                    hideTypingIndicator();
-                    throw error; // Re-throw to be handled by the main function
-                }
-            }
-
-            function addMessage(
-                sender,
-                text,
-                isError = false,
-                saveToHistory = true,
-            ) {
-                const messageDiv = document.createElement("div");
-                messageDiv.className = `message ${sender}`;
-
-                const contentDiv = document.createElement("div");
-                contentDiv.className = "message-content";
-                if (isError) {
-                    contentDiv.style.background = "#fef2f2";
-                    contentDiv.style.borderColor = "#fecaca";
-                    contentDiv.style.color = "#dc2626";
-                } else if (sender === "system") {
-                    contentDiv.style.background =
-                        "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)";
-                    contentDiv.style.borderColor = "rgba(99, 102, 241, 0.3)";
-                    contentDiv.style.color = "var(--text-primary)";
-                }
-
-                // Format text (basic markdown-like formatting)
-                const formattedText = formatMessage(text);
-                contentDiv.innerHTML = formattedText;
-
-                const metaDiv = document.createElement("div");
-                metaDiv.className = "message-meta";
-                metaDiv.textContent = new Date().toLocaleTimeString();
-
-                messageDiv.appendChild(contentDiv);
-                messageDiv.appendChild(metaDiv);
-                chatMessages.appendChild(messageDiv);
-
-                // Save to chat history (unless explicitly disabled or system message)
-                if (saveToHistory && !isError && sender !== "system") {
-                    addToChatHistory(sender, text);
-                }
-
-                // Scroll to bottom
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-
-            function formatMessage(text) {
-                // Basic formatting: convert **bold** and *italic*
-                return text
-                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                    .replace(/\*(.*?)\*/g, "<em>$1</em>")
-                    .replace(/\n/g, "<br>");
-            }
-
-            function showTypingIndicator(customText = null) {
-                const typingDiv = document.createElement("div");
-                typingDiv.className = "typing-indicator";
-                typingDiv.id = "typingIndicator";
-
-                // Create dots
-                for (let i = 0; i < 3; i++) {
-                    const dot = document.createElement("div");
-                    dot.className = "typing-dot";
-                    typingDiv.appendChild(dot);
-                }
-
-                // Add helpful text
-                const textDiv = document.createElement("div");
-                textDiv.className = "typing-text";
-                textDiv.textContent =
-                    customText ||
-                    (currentMode === "zoho"
-                        ? "Zoho SalesIQ processing..."
-                        : "AI is thinking...");
-                textDiv.style.fontSize = "0.75rem";
-                textDiv.style.color = "var(--text-secondary)";
-                textDiv.style.marginLeft = "8px";
-                typingDiv.appendChild(textDiv);
-
-                chatMessages.appendChild(typingDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-
-                // Progressive messages for longer waits (only for direct mode)
-                if (currentMode === "direct" && !customText) {
-                    setTimeout(() => {
-                        const currentTyping =
-                            document.getElementById("typingIndicator");
-                        if (currentTyping) {
-                            const textElement =
-                                currentTyping.querySelector(".typing-text");
-                            if (textElement) {
-                                textElement.textContent =
-                                    "Processing complex request...";
-                            }
+                            alert(info);
                         }
-                    }, 10000); // After 10 seconds
 
-                    setTimeout(() => {
-                        const currentTyping =
-                            document.getElementById("typingIndicator");
-                        if (currentTyping) {
-                            const textElement =
-                                currentTyping.querySelector(".typing-text");
-                            if (textElement) {
-                                textElement.textContent =
-                                    "AI model is working hard (up to 10 minutes for complex queries)...";
+                        async function updateStats() {
+                            try {
+                                const response = await fetch(`${API_BASE}/stats`);
+                                const data = await response.json();
+
+                                const totalElement =
+                                    document.getElementById("totalMessages");
+                                const responseTimeElement =
+                                    document.getElementById("responseTime");
+
+                                if (totalElement) {
+                                    totalElement.textContent = data.total_requests || 0;
+                                }
+
+                                if (responseTimeElement && lastResponseTime) {
+                                    responseTimeElement.textContent = `${lastResponseTime}ms`;
+                                }
+                            } catch (error) {
+                                console.error("Failed to update stats:", error);
                             }
-                        }
-                    }, 30000); // After 30 seconds
-
-                    setTimeout(() => {
-                        const currentTyping =
-                            document.getElementById("typingIndicator");
-                        if (currentTyping) {
-                            const textElement =
-                                currentTyping.querySelector(".typing-text");
-                            if (textElement) {
-                                textElement.textContent =
-                                    "Almost ready, complex analysis takes time...";
+                        } // Export chat history
+                        function exportChatHistory() {
+                            if (chatHistory.length === 0) {
+                                alert("No chat history to export.");
+                                return;
                             }
-                        }
-                    }, 120000); // After 2 minutes
 
-                    setTimeout(() => {
-                        const currentTyping =
-                            document.getElementById("typingIndicator");
-                        if (currentTyping) {
-                            const textElement =
-                                currentTyping.querySelector(".typing-text");
-                            if (textElement) {
-                                textElement.textContent =
-                                    "Still processing - this is a really complex question!";
+                            const exportData = {
+                                sessionId: sessionId,
+                                sessionStartTime: new Date(
+                                    parseInt(sessionStartTime),
+                                ).toISOString(),
+                                exportTime: new Date().toISOString(),
+                                messageCount: chatHistory.length,
+                                messages: chatHistory.map((entry) => ({
+                                    role: entry.role,
+                                    content: entry.content,
+                                    timestamp: new Date(entry.timestamp).toISOString(),
+                                })),
+                            };
+
+                            const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+                                type: "application/json",
+                            });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `chat-history-${new Date().toISOString().split("T")[0]}.json`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        } // Initialize application
+                        function initializeApp() {
+                            console.log("🚀 Initializing Personal AI Assistant...");
+                            console.log("Session ID:", sessionId);
+                            console.log("Chat History:", chatHistory.length, "messages");
+
+                            // Initialize conversation management
+                            initializeConversations();
+
+                            // Load existing chat history
+                            loadChatHistory();
+
+                            // Initial health check
+                            checkApiHealth();
+
+                            // Initial stats update
+                            updateStats();
+
+                            // Initialize Zoho SalesIQ integration monitoring
+                            initializeZohoIntegration();
+
+                            // Focus on input
+                            if (messageInput) {
+                                messageInput.focus();
                             }
-                        }
-                    }, 300000); // After 5 minutes
-                }
-            }
 
-            function hideTypingIndicator() {
-                const typingIndicator =
-                    document.getElementById("typingIndicator");
-                if (typingIndicator) {
-                    typingIndicator.remove();
-                }
-            }
+                            console.log("✅ App initialized successfully");
+                        } // Initialize when page loads
+                        document.addEventListener("DOMContentLoaded", initializeApp);
 
-            function clearChat() {
-                if (
-                    confirm(
-                        "Are you sure you want to clear the chat? This cannot be undone.",
-                    )
-                ) {
-                    chatMessages.innerHTML = `
-                    <div class="welcome-message">
-                        <i class="fas fa-comments"></i>
-                        <h3>Chat cleared! Ready for a new conversation.</h3>
-                        <p>Start a conversation by typing a message below.</p>
-                    </div>
-                `;
+                        // Periodic health checks
+                        setInterval(checkApiHealth, 30000); // Every 30 seconds
 
-                    // Reset session
-                    sessionId =
-                        "web_" +
-                        Date.now() +
-                        "_" +
-                        Math.random().toString(36).substr(2, 9);
-                    sessionMessageCount = 0;
-                    updateSessionStats();
-                    messageInput.focus();
-                }
-            }
+                        // Auto-update stats periodically
+                        setInterval(updateStats, 10000); // Every 10 seconds
 
-            function updateSessionStats() {
-                const sessionElement =
-                    document.getElementById("sessionMessages");
-                if (sessionElement) {
-                    sessionElement.textContent = sessionMessageCount;
-                }
+                        // Auto-save conversations periodically (safety net)
+                        setInterval(function () {
+                            if (chatHistory.length > 0) {
+                                saveChatHistory();
+                                updateCurrentConversation();
+                                console.log("🔄 Auto-saved conversation state");
+                            }
+                        }, 15000); // Every 15 seconds
 
-                // Update memory indicator
-                updateMemoryIndicator();
-            }
-
-            function updateMemoryIndicator() {
-                const memoryCount = document.getElementById("memoryCount");
-                const memoryFill = document.getElementById("memoryFill");
-
-                if (memoryCount && memoryFill) {
-                    const currentCount = chatHistory.length;
-                    const maxCount = 50;
-                    const percentage = (currentCount / maxCount) * 100;
-
-                    memoryCount.textContent = `${currentCount}/${maxCount}`;
-                    memoryFill.style.width = `${percentage}%`;
-
-                    // Change color based on usage
-                    if (percentage > 90) {
-                        memoryFill.style.background = "var(--error-color)";
-                    } else if (percentage > 70) {
-                        memoryFill.style.background = "var(--warning-color)";
-                    } else {
-                        memoryFill.style.background = "var(--gradient-primary)";
-                    }
-                }
-            }
-
-            function showSessionInfo() {
-                const sessionDuration = Date.now() - parseInt(sessionStartTime);
-                const hours = Math.floor(sessionDuration / (1000 * 60 * 60));
-                const minutes = Math.floor(
-                    (sessionDuration % (1000 * 60 * 60)) / (1000 * 60),
-                );
-
-                const info = `
-Session Information:
-━━━━━━━━━━━━━━━━━━━━
-
-📋 Session ID: ${sessionId}
-⏰ Duration: ${hours}h ${minutes}m
-💬 Messages: ${chatHistory.length}/50
-📊 User Messages: ${chatHistory.filter((m) => m.role === "user").length}
-🤖 AI Responses: ${chatHistory.filter((m) => m.role === "assistant").length}
-🕒 Started: ${new Date(parseInt(sessionStartTime)).toLocaleString()}
-⚡ Last Response: ${lastResponseTime}ms
-
-🧠 Memory Management:
-• Automatically keeps last 50 messages
-• Older messages are archived locally
-• Session persists across browser sessions
-            `.trim();
-
-                alert(info);
-            }
-
-            async function updateStats() {
-                try {
-                    const response = await fetch(`${API_BASE}/stats`);
-                    const data = await response.json();
-
-                    const totalElement =
-                        document.getElementById("totalMessages");
-                    const responseTimeElement =
-                        document.getElementById("responseTime");
-
-                    if (totalElement) {
-                        totalElement.textContent = data.total_requests || 0;
-                    }
-
-                    if (responseTimeElement && lastResponseTime) {
-                        responseTimeElement.textContent = `${lastResponseTime}ms`;
-                    }
-                } catch (error) {
-                    console.error("Failed to update stats:", error);
-                }
-            } // Export chat history
-            function exportChatHistory() {
-                if (chatHistory.length === 0) {
-                    alert("No chat history to export.");
-                    return;
-                }
-
-                const exportData = {
-                    sessionId: sessionId,
-                    sessionStartTime: new Date(
-                        parseInt(sessionStartTime),
-                    ).toISOString(),
-                    exportTime: new Date().toISOString(),
-                    messageCount: chatHistory.length,
-                    messages: chatHistory.map((entry) => ({
-                        role: entry.role,
-                        content: entry.content,
-                        timestamp: new Date(entry.timestamp).toISOString(),
-                    })),
-                };
-
-                const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-                    type: "application/json",
-                });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `chat-history-${new Date().toISOString().split("T")[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            } // Initialize application
-            function initializeApp() {
-                console.log("🚀 Initializing Personal AI Assistant...");
-                console.log("Session ID:", sessionId);
-                console.log("Chat History:", chatHistory.length, "messages");
-
-                // Initialize conversation management
-                initializeConversations();
-
-                // Load existing chat history
-                loadChatHistory();
-
-                // Initial health check
-                checkApiHealth();
-
-                // Initial stats update
-                updateStats();
-
-                // Initialize Zoho SalesIQ integration monitoring
-                initializeZohoIntegration();
-
-                // Focus on input
-                if (messageInput) {
-                    messageInput.focus();
-                }
-
-                console.log("✅ App initialized successfully");
-            } // Initialize when page loads
-            document.addEventListener("DOMContentLoaded", initializeApp);
-
-            // Periodic health checks
-            setInterval(checkApiHealth, 30000); // Every 30 seconds
-
-            // Auto-update stats periodically
-            setInterval(updateStats, 10000); // Every 10 seconds
-
-            // Auto-save conversations periodically (safety net)
-            setInterval(function () {
-                if (chatHistory.length > 0) {
-                    saveChatHistory();
-                    updateCurrentConversation();
-                    console.log("🔄 Auto-saved conversation state");
-                }
-            }, 15000); // Every 15 seconds
-
-            // Save on page unload
-            window.addEventListener("beforeunload", function () {
-                if (chatHistory.length > 0) {
-                    saveChatHistory();
-                    updateCurrentConversation();
-                }
-            });
+                        // Save on page unload
+                        window.addEventListener("beforeunload", function () {
+                            if (chatHistory.length > 0) {
+                                saveChatHistory();
+                                updateCurrentConversation();
+                            }
+                        });
         </script>
     </body>
 </html>
