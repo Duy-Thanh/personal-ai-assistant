@@ -1840,7 +1840,7 @@
                                 class="action-btn accent"
                                 onclick="toggleAssistWidget()"
                             >
-                                <i class="fas fa-desktop"></i>
+                                <i class="fas fa-headset"></i>
                                 Remote Support
                             </button>
                             <button
@@ -1855,7 +1855,52 @@
                             id="assistWidget"
                             class="widget-container"
                             style="display: none"
-                        ></div>
+                        >
+                            <div style="text-align: center; padding: 2rem">
+                                <div style="margin-bottom: 1rem">
+                                    <i
+                                        class="fas fa-external-link-alt"
+                                        style="
+                                            font-size: 2rem;
+                                            color: #059669;
+                                            margin-bottom: 1rem;
+                                            display: block;
+                                        "
+                                    ></i>
+                                    <h4
+                                        style="
+                                            margin: 0 0 0.5rem 0;
+                                            color: #333;
+                                        "
+                                    >
+                                        Remote Support Session
+                                    </h4>
+                                    <p
+                                        style="
+                                            margin: 0;
+                                            color: #666;
+                                            font-size: 0.9rem;
+                                        "
+                                    >
+                                        Opens in a new secure window
+                                    </p>
+                                </div>
+                                <button
+                                    class="action-btn primary"
+                                    onclick="openZohoAssistWindow()"
+                                    style="margin: 0.5rem 0"
+                                >
+                                    <i class="fas fa-desktop"></i>
+                                    <span>Start Remote Session</span>
+                                </button>
+                                <div style="margin-top: 1rem">
+                                    <small style="color: #999"
+                                        >Secure connection via Zoho
+                                        Assist</small
+                                    >
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="sidebar-section">
@@ -4527,33 +4572,20 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                     // Show widget
                     widget.style.display = "block";
 
-                    // Create assist iframe if not exists
-                    if (!widget.innerHTML) {
-                        widget.innerHTML = `
-                            <iframe
-                                src="https://assist.zoho.com/customer/join"
-                                height="400"
-                                style="border: none; border-radius: 8px;">
-                            </iframe>
-                            <div style="text-align: center; margin-top: 0.5rem;">
-                                <small style="color: #666;">Powered by Zoho Assist</small>
-                            </div>
-                        `;
-                    }
-
                     addMessage(
                         "system",
-                        "🛠️ **Zoho Assist Widget Activated**\n\n" +
+                        "🛠️ **Zoho Assist Remote Support**\n\n" +
+                            "Click 'Start Remote Session' to open Zoho Assist in a secure new window.\n\n" +
+                            "**What you can do:**\n" +
+                            "• Join remote support sessions\n" +
+                            "• Share your screen for troubleshooting\n" +
+                            "• Get technical assistance\n" +
+                            "• File transfer and chat\n\n" +
                             "**Setup Required:**\n" +
-                            "1. Create account at https://assist.zoho.com\n" +
-                            "2. Set up your organization\n" +
-                            "3. Get your custom assist URL\n" +
-                            "4. Update widget URL in code\n\n" +
-                            "**Features:**\n" +
-                            "• Screen sharing\n" +
-                            "• Remote control\n" +
-                            "• File transfer\n" +
-                            "• Voice/video chat",
+                            "1. Create free account at https://assist.zoho.com\n" +
+                            "2. Get session ID from support agent\n" +
+                            "3. Enter ID in the opened window\n\n" +
+                            "All connections are secure and encrypted! 🔒",
                     );
                 } else {
                     // Hide widget
@@ -4562,21 +4594,55 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 }
             }
 
+            function openZohoAssistWindow() {
+                console.log("🛠️ Opening Zoho Assist in new window...");
+                const assistUrl = "https://assist.zoho.com/customer/join";
+                const newWindow = window.open(
+                    assistUrl,
+                    "_blank",
+                    "width=800,height=600,resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no",
+                );
+
+                if (newWindow) {
+                    addMessage(
+                        "system",
+                        "🛠️ **Zoho Assist Opened Successfully**\n\n" +
+                            "A secure remote support window has opened. You can now:\n\n" +
+                            "1. **Enter Session ID** provided by support agent\n" +
+                            "2. **Allow screen sharing** when prompted\n" +
+                            "3. **Start getting help** with your technical issues\n\n" +
+                            "The support agent can now assist you remotely! 🎯",
+                    );
+                } else {
+                    addMessage(
+                        "system",
+                        "❌ **Pop-up Blocked**\n\n" +
+                            "Your browser blocked the pop-up window. Please:\n\n" +
+                            "1. Allow pop-ups for this site\n" +
+                            "2. Or manually visit: https://assist.zoho.com/customer/join\n" +
+                            "3. Enter the session ID provided by your support agent\n\n" +
+                            "This ensures secure remote support connections.",
+                    );
+                }
+            }
+
             function showAssistInfo() {
                 addMessage(
                     "system",
-                    "🛠️ **Zoho Assist Setup Guide**\n\n" +
-                        "**Free Account Setup:**\n" +
-                        "1. Visit https://assist.zoho.com\n" +
-                        "2. Sign up for free account\n" +
-                        "3. Set up your organization name\n" +
-                        "4. Configure security settings\n" +
-                        "5. Get your custom portal URL\n\n" +
-                        "**Widget Integration:**\n" +
-                        "• Copy your assist portal URL\n" +
-                        "• Update iframe src in the code\n" +
-                        "• Test remote session functionality\n\n" +
-                        "**Free Features:** Unlimited sessions, screen sharing, secure connections",
+                    "🛠️ **Zoho Assist - Remote Support Guide**\n\n" +
+                        "**How it works:**\n" +
+                        "1. Click 'Remote Support' to open the interface\n" +
+                        "2. Click 'Start Remote Session' to open Zoho Assist\n" +
+                        "3. Enter session ID from your support agent\n" +
+                        "4. Allow screen sharing when prompted\n\n" +
+                        "**Free Features:**\n" +
+                        "✅ Unlimited remote sessions\n" +
+                        "✅ Screen sharing & remote control\n" +
+                        "✅ Cross-platform support\n" +
+                        "✅ Secure encrypted connections\n" +
+                        "✅ File transfer capabilities\n" +
+                        "✅ Voice & video chat\n\n" +
+                        "**Security:** All connections use enterprise-grade encryption 🔒",
                 );
             }
 
@@ -4612,11 +4678,11 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                             "• Calendar integration\n" +
                             "• Automatic notifications\n\n" +
                             "🛠️ **Zoho Assist** - Get remote support:\n" +
-                            "• Screen sharing widget\n" +
-                            "• Remote troubleshooting\n" +
-                            "• Cross-platform support\n\n" +
+                            "• Secure remote sessions\n" +
+                            "• Screen sharing & troubleshooting\n" +
+                            "• Opens in secure new window\n\n" +
                             "💬 **Zoho SalesIQ** - Live chat integration\n\n" +
-                            "All widgets are embedded directly in the sidebar! How can I help you get started?",
+                            "Bookings embeds in sidebar, Assist opens securely in new window! How can I help you get started?",
                     );
                 }
 
