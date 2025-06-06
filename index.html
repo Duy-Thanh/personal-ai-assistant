@@ -2236,14 +2236,15 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                             "system",
                             `💡 **Welcome to Your Personal AI Assistant!**
 
-**Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}
+        **Current Mode:** ${currentMode === "zoho" ? "🔗 Zoho SalesIQ" : "🤖 Direct LLM"}
 
-**Quick Commands:**
-• Type \`#zoho\` to switch to Zoho SalesIQ mode
-• Type \`#direct\` to switch to Direct LLM mode
-• Type \`#help\` for more commands
+        **Quick Commands:**
+        • Type \`#zoho\` to switch to Zoho SalesIQ mode
+        • Type \`#direct\` to switch to Direct LLM mode
+        • Type \`#zoho Hello\` to switch mode and send message
+        • Type \`#help\` for more commands
 
-Start chatting or use a command!`,
+        Start chatting or use a command!`,
                             false,
                             false,
                         );
@@ -2733,43 +2734,98 @@ Start chatting or use a command!`,
                 updateSessionStats();
 
                 // Route message based on current mode
+                console.log("📤 Routing message via mode:", currentMode);
                 if (currentMode === "zoho") {
+                    console.log("🔗 Sending to Zoho SalesIQ...");
                     await sendToZohoSalesIQ(message);
                 } else {
+                    console.log("🤖 Sending to Direct LLM...");
                     await sendToDirectLLM(message);
                 }
             }
 
             function handleSpecialCommands(message) {
-                const command = message.toLowerCase().trim();
+                const messageText = message.toLowerCase().trim();
+                const firstWord = messageText.split(" ")[0];
 
-                // Clear input first
-                messageInput.value = "";
-                messageInput.style.height = "auto";
+                console.log(
+                    "🔍 Checking command:",
+                    firstWord,
+                    "in message:",
+                    message,
+                );
 
-                if (command === "#zoho" || command === "/zoho") {
+                // Check if the first word is a command
+                if (firstWord === "#zoho" || firstWord === "/zoho") {
+                    console.log("✅ Detected Zoho command");
+                    // Clear input and handle command
+                    messageInput.value = "";
+                    messageInput.style.height = "auto";
                     switchToZohoMode();
+
+                    // If there's additional text after the command, process it in Zoho mode
+                    const remainingText = message
+                        .trim()
+                        .substring(firstWord.length)
+                        .trim();
+                    if (remainingText.length > 0) {
+                        console.log(
+                            "📝 Additional text found, will send:",
+                            remainingText,
+                        );
+                        setTimeout(() => {
+                            messageInput.value = remainingText;
+                            sendMessage();
+                        }, 500); // Small delay to let mode switch complete
+                    }
                     return true;
                 } else if (
-                    command === "#direct" ||
-                    command === "/direct" ||
-                    command === "#llm" ||
-                    command === "/llm"
+                    firstWord === "#direct" ||
+                    firstWord === "/direct" ||
+                    firstWord === "#llm" ||
+                    firstWord === "/llm"
                 ) {
+                    console.log("✅ Detected Direct mode command");
+                    messageInput.value = "";
+                    messageInput.style.height = "auto";
                     switchToDirectMode();
+
+                    // If there's additional text after the command, process it in direct mode
+                    const remainingText = message
+                        .trim()
+                        .substring(firstWord.length)
+                        .trim();
+                    if (remainingText.length > 0) {
+                        console.log(
+                            "📝 Additional text found, will send:",
+                            remainingText,
+                        );
+                        setTimeout(() => {
+                            messageInput.value = remainingText;
+                            sendMessage();
+                        }, 500);
+                    }
                     return true;
-                } else if (command === "#help" || command === "/help") {
+                } else if (firstWord === "#help" || firstWord === "/help") {
+                    console.log("✅ Detected Help command");
+                    messageInput.value = "";
+                    messageInput.style.height = "auto";
                     showCommandHelp();
                     return true;
-                } else if (command === "#status" || command === "/status") {
+                } else if (firstWord === "#status" || firstWord === "/status") {
+                    console.log("✅ Detected Status command");
+                    messageInput.value = "";
+                    messageInput.style.height = "auto";
                     showSystemStatus();
                     return true;
                 }
 
+                console.log("❌ No command detected");
                 return false; // Not a special command
             }
 
             function switchToZohoMode() {
+                console.log("🔗 Switching to Zoho SalesIQ mode...");
                 currentMode = "zoho";
                 localStorage.setItem("chatMode", "zoho");
 
@@ -2789,6 +2845,7 @@ Type \`#direct\` to switch back to direct LLM mode.`,
                 );
 
                 updateModeIndicator();
+                console.log("✅ Mode switched to Zoho SalesIQ");
 
                 // Try to open Zoho widget if available
                 if (
@@ -2804,6 +2861,7 @@ Type \`#direct\` to switch back to direct LLM mode.`,
             }
 
             function switchToDirectMode() {
+                console.log("🤖 Switching to Direct LLM mode...");
                 currentMode = "direct";
                 localStorage.setItem("chatMode", "direct");
 
@@ -2824,6 +2882,7 @@ Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
                 );
 
                 updateModeIndicator();
+                console.log("✅ Mode switched to Direct LLM");
             }
 
             function showCommandHelp() {
@@ -2835,6 +2894,10 @@ Type \`#zoho\` to switch to Zoho SalesIQ mode.`,
 • \`#zoho\` or \`/zoho\` - Switch to Zoho SalesIQ mode
 • \`#direct\` or \`/direct\` - Switch to Direct LLM mode
 • \`#llm\` or \`/llm\` - Switch to Direct LLM mode
+
+**Smart Commands:**
+• \`#zoho Hello\` - Switch to Zoho mode and send "Hello"
+• \`#direct What is AI?\` - Switch to Direct mode and ask question
 
 **Information:**
 • \`#help\` or \`/help\` - Show this help
