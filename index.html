@@ -1036,14 +1036,16 @@
             }
 
             .action-btn.secondary {
-                background: var(--surface-elevated);
-                color: var(--text-secondary);
-                border: 1px solid var(--border);
+                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                color: white;
+                border: none;
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
             }
 
             .action-btn.secondary:hover {
-                background: var(--error-color);
-                color: white;
+                background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+                box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+                transform: translateY(-2px);
             }
 
             .action-btn.accent {
@@ -1152,17 +1154,14 @@
             }
 
             .action-btn.primary {
-                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
             }
 
             .action-btn.primary:hover {
-                box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
-            }
-
-            .action-btn.secondary:hover {
-                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+                background: linear-gradient(135deg, #059669 0%, #047857 100%);
+                box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+                transform: translateY(-2px);
             }
 
             .action-btn.accent {
@@ -1225,17 +1224,28 @@
             }
 
             /* Enhanced action buttons for Zoho services */
-            .action-btn:hover {
-                transform: translateY(-2px);
-                transition: all 0.3s ease;
+            .action-btn {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                font-weight: 500;
+                letter-spacing: 0.025em;
+                min-height: 40px;
+                padding: 0.75rem 1rem;
+                gap: 0.5rem;
             }
 
-            .action-btn.secondary {
-                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            .action-btn:hover {
+                transform: translateY(-2px);
             }
 
             .action-btn.accent {
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                background: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
+                box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+            }
+
+            .action-btn.accent:hover {
+                background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+                box-shadow: 0 8px 25px rgba(236, 72, 153, 0.4);
+                transform: translateY(-2px);
             }
 
             /* Enhanced Memory Indicator */
@@ -1747,10 +1757,11 @@
                                 <span>New Session</span>
                             </button>
                             <button
-                                class="action-btn secondary"
+                                class="action-btn accent"
                                 onclick="clearChatHistory()"
+                                title="Clear chat history"
                             >
-                                <i class="fas fa-trash"></i>
+                                <i class="fas fa-trash-alt"></i>
                                 <span>Clear History</span>
                             </button>
                             <button
@@ -1777,11 +1788,12 @@
                         </h3>
                         <div class="action-buttons">
                             <button
-                                class="action-btn secondary"
+                                class="action-btn primary"
                                 onclick="toggleBookingWidget()"
+                                title="Schedule an appointment"
                             >
                                 <i class="fas fa-calendar-plus"></i>
-                                Book Meeting
+                                <span>Book Meeting</span>
                             </button>
                             <button
                                 class="action-btn info"
