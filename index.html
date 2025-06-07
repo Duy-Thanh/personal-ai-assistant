@@ -1833,7 +1833,51 @@
                             id="projectsWidget"
                             class="widget-container"
                             style="display: none"
-                        ></div>
+                        >
+                            <div style="text-align: center; padding: 2rem">
+                                <div style="margin-bottom: 1rem">
+                                    <i
+                                        class="fas fa-project-diagram"
+                                        style="
+                                            font-size: 2rem;
+                                            color: #059669;
+                                            margin-bottom: 1rem;
+                                            display: block;
+                                        "
+                                    ></i>
+                                    <h4
+                                        style="
+                                            margin: 0 0 0.5rem 0;
+                                            color: #333;
+                                        "
+                                    >
+                                        Project Management
+                                    </h4>
+                                    <p
+                                        style="
+                                            margin: 0;
+                                            color: #666;
+                                            font-size: 0.9rem;
+                                        "
+                                    >
+                                        Manage projects and tasks
+                                    </p>
+                                </div>
+                                <button
+                                    class="action-btn primary"
+                                    onclick="openZohoProjectsWindow()"
+                                    style="margin: 0.5rem 0"
+                                >
+                                    <i class="fas fa-external-link-alt"></i>
+                                    <span>Open Projects Portal</span>
+                                </button>
+                                <div style="margin-top: 1rem">
+                                    <small style="color: #999"
+                                        >Powered by Zoho Projects</small
+                                    >
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Zoho Social Section -->
@@ -4580,42 +4624,61 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                     // Show widget
                     widget.style.display = "block";
 
-                    // Create projects iframe if not exists
-                    if (!widget.innerHTML) {
-                        // TODO: Replace 'your-portal' with your actual Zoho Projects portal name
-                        // Get this from: Zoho Projects → Portal Settings → General → Portal URL
-                        widget.innerHTML = `
-                            <iframe
-                                src="https://projects.zoho.com/portal/your-portal"
-                                height="500"
-                                style="border: none; border-radius: 8px; width: 100%;">
-                            </iframe>
-                            <div style="text-align: center; margin-top: 0.5rem;">
-                                <small style="color: #666;">Powered by Zoho Projects</small>
-                                <br><small style="color: #999;">Update portal URL in code with your projects portal</small>
-                            </div>
-                        `;
-                    }
-
                     addMessage(
                         "system",
-                        "📊 **Zoho Projects Widget Activated**\n\n" +
+                        "📊 **Zoho Projects Portal**\n\n" +
+                            "Click 'Open Projects Portal' to access your project management dashboard.\n\n" +
+                            "**What you can do:**\n" +
+                            "• Create and manage projects\n" +
+                            "• Track tasks and milestones\n" +
+                            "• Collaborate with team members\n" +
+                            "• Generate Gantt charts and reports\n" +
+                            "• Share documents and files\n" +
+                            "• Monitor project progress\n\n" +
                             "**Setup Required:**\n" +
-                            "1. Create account at https://projects.zoho.com\n" +
+                            "1. Create free account at https://projects.zoho.com\n" +
                             "2. Create your first project\n" +
-                            "3. Get your portal URL from Portal Settings → General\n" +
-                            "4. Replace 'your-portal' in code with your portal name\n\n" +
-                            "**Free Features:**\n" +
-                            "• 3 projects with unlimited users\n" +
-                            "• Task management & milestones\n" +
-                            "• Gantt charts & time tracking\n" +
-                            "• Document & file sharing\n" +
-                            "• Team collaboration tools",
+                            "3. Add team members and tasks\n\n" +
+                            "Professional project management made simple! 🚀",
                     );
                 } else {
                     // Hide widget
                     widget.style.display = "none";
                     addMessage("system", "📊 Projects widget hidden.");
+                }
+            }
+
+            function openZohoProjectsWindow() {
+                console.log("📊 Opening Zoho Projects in new window...");
+                const projectsUrl = "https://projects.zoho.com/portal/thanhdz167gmaildotcom";
+                const newWindow = window.open(
+                    projectsUrl,
+                    "_blank",
+                    "width=1200,height=800,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=yes",
+                );
+
+                if (newWindow) {
+                    addMessage(
+                        "system",
+                        "📊 **Zoho Projects Opened Successfully**\n\n" +
+                            "Your project management portal has opened. You can now:\n\n" +
+                            "1. **Create projects** - Set up new project workspaces\n" +
+                            "2. **Manage tasks** - Add, assign, and track task progress\n" +
+                            "3. **Track time** - Monitor hours spent on activities\n" +
+                            "4. **Generate reports** - View project analytics and insights\n" +
+                            "5. **Collaborate** - Work with team members in real-time\n\n" +
+                            "Start managing your projects like a pro! 🎯",
+                    );
+                } else {
+                    addMessage(
+                        "system",
+                        "❌ **Pop-up Blocked**\n\n" +
+                            "Your browser blocked the pop-up window. Please:\n\n" +
+                            "1. Allow pop-ups for this site\n" +
+                            "2. Or manually visit: https://projects.zoho.com\n" +
+                            "3. Sign in with your Zoho account\n\n" +
+                            "This opens your project management portal.",
+                    );
                 }
             }
 
