@@ -1183,12 +1183,16 @@
             }
 
             /* Zoho Services Styling */
-            .sidebar-section h3 i.fa-calendar-alt {
+            .sidebar-section h3 i.fa-project-diagram {
                 color: #4f46e5;
             }
 
-            .sidebar-section h3 i.fa-headset {
+            .sidebar-section h3 i.fa-share-alt {
                 color: #059669;
+            }
+
+            .sidebar-section h3 i.fa-video {
+                color: #dc2626;
             }
 
             /* Widget Container Styling */
@@ -1803,63 +1807,63 @@
                         </div>
                     </div>
 
-                    <!-- Zoho Bookings Section -->
+                    <!-- Zoho Projects Section -->
                     <div class="sidebar-section">
                         <h3>
-                            <i class="fas fa-calendar-alt"></i> Zoho Bookings
+                            <i class="fas fa-project-diagram"></i> Zoho Projects
                         </h3>
                         <div class="action-buttons">
                             <button
                                 class="action-btn primary"
-                                onclick="toggleBookingWidget()"
-                                title="Schedule an appointment"
+                                onclick="toggleProjectsWidget()"
+                                title="Manage projects and tasks"
                             >
-                                <i class="fas fa-calendar-plus"></i>
-                                <span>Book Meeting</span>
+                                <i class="fas fa-project-diagram"></i>
+                                Projects
                             </button>
                             <button
                                 class="action-btn info"
-                                onclick="showBookingInfo()"
-                            >
-                                <i class="fas fa-info-circle"></i>
-                                About Bookings
-                            </button>
-                        </div>
-                        <div
-                            id="bookingWidget"
-                            class="widget-container"
-                            style="display: none"
-                        ></div>
-                    </div>
-
-                    <!-- Zoho Assist Section -->
-                    <div class="sidebar-section">
-                        <h3><i class="fas fa-headset"></i> Zoho Assist</h3>
-                        <div class="action-buttons">
-                            <button
-                                class="action-btn accent"
-                                onclick="toggleAssistWidget()"
-                            >
-                                <i class="fas fa-headset"></i>
-                                Remote Support
-                            </button>
-                            <button
-                                class="action-btn primary"
-                                onclick="showAssistInfo()"
+                                onclick="showProjectsInfo()"
                             >
                                 <i class="fas fa-question-circle"></i>
                                 Get Help
                             </button>
                         </div>
                         <div
-                            id="assistWidget"
+                            id="projectsWidget"
+                            class="widget-container"
+                            style="display: none"
+                        ></div>
+                    </div>
+
+                    <!-- Zoho Social Section -->
+                    <div class="sidebar-section">
+                        <h3><i class="fas fa-share-alt"></i> Zoho Social</h3>
+                        <div class="action-buttons">
+                            <button
+                                class="action-btn accent"
+                                onclick="toggleSocialWidget()"
+                            >
+                                <i class="fas fa-share-alt"></i>
+                                Social Media
+                            </button>
+                            <button
+                                class="action-btn primary"
+                                onclick="showSocialInfo()"
+                            >
+                                <i class="fas fa-question-circle"></i>
+                                Get Help
+                            </button>
+                        </div>
+                        <div
+                            id="socialWidget"
                             class="widget-container"
                             style="display: none"
                         >
                             <div style="text-align: center; padding: 2rem">
                                 <div style="margin-bottom: 1rem">
                                     <i
-                                        class="fas fa-external-link-alt"
+                                        class="fas fa-share-alt"
                                         style="
                                             font-size: 2rem;
                                             color: #059669;
@@ -1873,7 +1877,7 @@
                                             color: #333;
                                         "
                                     >
-                                        Remote Support Session
+                                        Social Media Dashboard
                                     </h4>
                                     <p
                                         style="
@@ -1882,21 +1886,90 @@
                                             font-size: 0.9rem;
                                         "
                                     >
-                                        Opens in a new secure window
+                                        Manage all your social accounts
                                     </p>
                                 </div>
                                 <button
                                     class="action-btn primary"
-                                    onclick="openZohoAssistWindow()"
+                                    onclick="openZohoSocialWindow()"
                                     style="margin: 0.5rem 0"
                                 >
-                                    <i class="fas fa-desktop"></i>
-                                    <span>Start Remote Session</span>
+                                    <i class="fas fa-external-link-alt"></i>
+                                    <span>Open Social Dashboard</span>
                                 </button>
                                 <div style="margin-top: 1rem">
                                     <small style="color: #999"
-                                        >Secure connection via Zoho
-                                        Assist</small
+                                        >Powered by Zoho Social</small
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Zoho Webinar Section -->
+                    <div class="sidebar-section">
+                        <h3><i class="fas fa-video"></i> Zoho Webinar</h3>
+                        <div class="action-buttons">
+                            <button
+                                class="action-btn accent"
+                                onclick="toggleWebinarWidget()"
+                            >
+                                <i class="fas fa-broadcast-tower"></i>
+                                Webinars
+                            </button>
+                            <button
+                                class="action-btn primary"
+                                onclick="showWebinarInfo()"
+                            >
+                                <i class="fas fa-question-circle"></i>
+                                Get Help
+                            </button>
+                        </div>
+                        <div
+                            id="webinarWidget"
+                            class="widget-container"
+                            style="display: none"
+                        >
+                            <div style="text-align: center; padding: 2rem">
+                                <div style="margin-bottom: 1rem">
+                                    <i
+                                        class="fas fa-video"
+                                        style="
+                                            font-size: 2rem;
+                                            color: #059669;
+                                            margin-bottom: 1rem;
+                                            display: block;
+                                        "
+                                    ></i>
+                                    <h4
+                                        style="
+                                            margin: 0 0 0.5rem 0;
+                                            color: #333;
+                                        "
+                                    >
+                                        Webinar Management
+                                    </h4>
+                                    <p
+                                        style="
+                                            margin: 0;
+                                            color: #666;
+                                            font-size: 0.9rem;
+                                        "
+                                    >
+                                        Host and manage webinars
+                                    </p>
+                                </div>
+                                <button
+                                    class="action-btn primary"
+                                    onclick="openZohoWebinarWindow()"
+                                    style="margin: 0.5rem 0"
+                                >
+                                    <i class="fas fa-external-link-alt"></i>
+                                    <span>Open Webinar Console</span>
+                                </button>
+                                <div style="margin-top: 1rem">
+                                    <small style="color: #999"
+                                        >Powered by Zoho Webinar</small
                                     >
                                 </div>
                             </div>
@@ -4498,75 +4571,76 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                 URL.revokeObjectURL(url);
             }
 
-            // Zoho Bookings Integration Functions
-            function toggleBookingWidget() {
-                console.log("📅 Toggling Zoho Bookings widget...");
-                const widget = document.getElementById("bookingWidget");
+            // Zoho Projects Integration Functions
+            function toggleProjectsWidget() {
+                console.log("📊 Toggling Zoho Projects widget...");
+                const widget = document.getElementById("projectsWidget");
 
                 if (widget.style.display === "none") {
                     // Show widget
                     widget.style.display = "block";
 
-                    // Create booking iframe if not exists
+                    // Create projects iframe if not exists
                     if (!widget.innerHTML) {
-                        // TODO: Replace 'javalorant' with your actual Zoho Bookings portal name
-                        // Get this from: Zoho Bookings → Workspaces → Share → Embed
+                        // TODO: Replace 'your-portal' with your actual Zoho Projects portal name
+                        // Get this from: Zoho Projects → Portal Settings → General → Portal URL
                         widget.innerHTML = `
                             <iframe
-                                src="https://bookings.zoho.com/portal/javalorant"
+                                src="https://projects.zoho.com/portal/your-portal"
                                 height="500"
-                                style="border: none; border-radius: 8px;">
+                                style="border: none; border-radius: 8px; width: 100%;">
                             </iframe>
                             <div style="text-align: center; margin-top: 0.5rem;">
-                                <small style="color: #666;">Powered by Zoho Bookings</small>
-                                <br><small style="color: #999;">Update portal URL in code with your booking page</small>
+                                <small style="color: #666;">Powered by Zoho Projects</small>
+                                <br><small style="color: #999;">Update portal URL in code with your projects portal</small>
                             </div>
                         `;
                     }
 
                     addMessage(
                         "system",
-                        "📅 **Zoho Bookings Widget Activated**\n\n" +
+                        "📊 **Zoho Projects Widget Activated**\n\n" +
                             "**Setup Required:**\n" +
-                            "1. Create account at https://bookings.zoho.com\n" +
-                            "2. Set up your booking service\n" +
-                            "3. Get your portal URL from Workspaces → Share → Embed\n" +
-                            "4. Replace 'javalorant' in code with your portal name\n\n" +
-                            "**Features:**\n" +
-                            "• Choose available time slots\n" +
-                            "• Automatic calendar sync\n" +
-                            "• Email confirmations\n" +
-                            "• No back-and-forth emails",
+                            "1. Create account at https://projects.zoho.com\n" +
+                            "2. Create your first project\n" +
+                            "3. Get your portal URL from Portal Settings → General\n" +
+                            "4. Replace 'your-portal' in code with your portal name\n\n" +
+                            "**Free Features:**\n" +
+                            "• 3 projects with unlimited users\n" +
+                            "• Task management & milestones\n" +
+                            "• Gantt charts & time tracking\n" +
+                            "• Document & file sharing\n" +
+                            "• Team collaboration tools",
                     );
                 } else {
                     // Hide widget
                     widget.style.display = "none";
-                    addMessage("system", "📅 Booking widget hidden.");
+                    addMessage("system", "📊 Projects widget hidden.");
                 }
             }
 
-            function showBookingInfo() {
+            function showProjectsInfo() {
                 addMessage(
                     "system",
-                    "📅 **Zoho Bookings Setup Guide**\n\n" +
+                    "📊 **Zoho Projects Setup Guide**\n\n" +
                         "**Free Account Setup:**\n" +
-                        "1. Visit https://bookings.zoho.com\n" +
+                        "1. Visit https://projects.zoho.com\n" +
                         "2. Sign up with your Zoho account\n" +
-                        "3. Create your first service (consultation, demo, etc.)\n" +
-                        "4. Set your availability and time zone\n" +
-                        "5. Customize your booking page\n\n" +
-                        "**Get Widget URL:**\n" +
-                        "• Go to Workspaces → Share → Embed\n" +
-                        "• Copy your portal URL\n" +
-                        "• Replace 'javalorant' in the code\n\n" +
-                        "**Free Features:** 1 event type, calendar sync, notifications",
+                        "3. Create your first project\n" +
+                        "4. Add team members and tasks\n" +
+                        "5. Set up milestones and deadlines\n\n" +
+                        "**Get Portal URL:**\n" +
+                        "• Go to Portal Settings → General → Portal URL\n" +
+                        "• Copy your portal name\n" +
+                        "• Replace 'your-portal' in the code\n\n" +
+                        "**Free Features:** 3 projects, unlimited users, 10GB storage",
                 );
             }
 
-            // Zoho Assist Integration Functions
-            function toggleAssistWidget() {
-                console.log("🛠️ Toggling Zoho Assist widget...");
-                const widget = document.getElementById("assistWidget");
+            // Zoho Social Integration Functions
+            function toggleSocialWidget() {
+                console.log("📱 Toggling Zoho Social widget...");
+                const widget = document.getElementById("socialWidget");
 
                 if (widget.style.display === "none") {
                     // Show widget
@@ -4574,44 +4648,46 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
 
                     addMessage(
                         "system",
-                        "🛠️ **Zoho Assist Remote Support**\n\n" +
-                            "Click 'Start Remote Session' to open Zoho Assist in a secure new window.\n\n" +
+                        "📱 **Zoho Social Dashboard**\n\n" +
+                            "Click 'Open Social Dashboard' to manage all your social media accounts in one place.\n\n" +
                             "**What you can do:**\n" +
-                            "• Join remote support sessions\n" +
-                            "• Share your screen for troubleshooting\n" +
-                            "• Get technical assistance\n" +
-                            "• File transfer and chat\n\n" +
+                            "• Schedule posts across multiple platforms\n" +
+                            "• Monitor social media mentions\n" +
+                            "• Analyze engagement and performance\n" +
+                            "• Collaborate with team members\n" +
+                            "• Manage multiple brand accounts\n\n" +
                             "**Setup Required:**\n" +
-                            "1. Create free account at https://assist.zoho.com\n" +
-                            "2. Get session ID from support agent\n" +
-                            "3. Enter ID in the opened window\n\n" +
-                            "All connections are secure and encrypted! 🔒",
+                            "1. Create free account at https://social.zoho.com\n" +
+                            "2. Connect your social media accounts\n" +
+                            "3. Start scheduling and monitoring\n\n" +
+                            "Manage Facebook, Twitter, LinkedIn, Instagram & more! 🌟",
                     );
                 } else {
                     // Hide widget
                     widget.style.display = "none";
-                    addMessage("system", "🛠️ Remote support widget hidden.");
+                    addMessage("system", "📱 Social media widget hidden.");
                 }
             }
 
-            function openZohoAssistWindow() {
-                console.log("🛠️ Opening Zoho Assist in new window...");
-                const assistUrl = "https://assist.zoho.com/customer/join";
+            function openZohoSocialWindow() {
+                console.log("📱 Opening Zoho Social in new window...");
+                const socialUrl = "https://social.zoho.com";
                 const newWindow = window.open(
-                    assistUrl,
+                    socialUrl,
                     "_blank",
-                    "width=800,height=600,resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no",
+                    "width=1200,height=800,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=yes",
                 );
 
                 if (newWindow) {
                     addMessage(
                         "system",
-                        "🛠️ **Zoho Assist Opened Successfully**\n\n" +
-                            "A secure remote support window has opened. You can now:\n\n" +
-                            "1. **Enter Session ID** provided by support agent\n" +
-                            "2. **Allow screen sharing** when prompted\n" +
-                            "3. **Start getting help** with your technical issues\n\n" +
-                            "The support agent can now assist you remotely! 🎯",
+                        "📱 **Zoho Social Opened Successfully**\n\n" +
+                            "Your social media dashboard has opened. You can now:\n\n" +
+                            "1. **Connect accounts** - Link Facebook, Twitter, LinkedIn, Instagram\n" +
+                            "2. **Schedule posts** - Plan your content calendar\n" +
+                            "3. **Monitor mentions** - Track brand conversations\n" +
+                            "4. **Analyze performance** - View detailed analytics\n\n" +
+                            "Start managing your social presence like a pro! 🚀",
                     );
                 } else {
                     addMessage(
@@ -4619,30 +4695,119 @@ Need help? Check the DAY2_ZOHO_SETUP.md guide!
                         "❌ **Pop-up Blocked**\n\n" +
                             "Your browser blocked the pop-up window. Please:\n\n" +
                             "1. Allow pop-ups for this site\n" +
-                            "2. Or manually visit: https://assist.zoho.com/customer/join\n" +
-                            "3. Enter the session ID provided by your support agent\n\n" +
-                            "This ensures secure remote support connections.",
+                            "2. Or manually visit: https://social.zoho.com\n" +
+                            "3. Sign in with your Zoho account\n\n" +
+                            "This opens your social media management dashboard.",
                     );
                 }
             }
 
-            function showAssistInfo() {
+            function showSocialInfo() {
                 addMessage(
                     "system",
-                    "🛠️ **Zoho Assist - Remote Support Guide**\n\n" +
-                        "**How it works:**\n" +
-                        "1. Click 'Remote Support' to open the interface\n" +
-                        "2. Click 'Start Remote Session' to open Zoho Assist\n" +
-                        "3. Enter session ID from your support agent\n" +
-                        "4. Allow screen sharing when prompted\n\n" +
+                    "📱 **Zoho Social - Setup Guide**\n\n" +
+                        "**How to get started:**\n" +
+                        "1. Click 'Social Media' to see the widget\n" +
+                        "2. Click 'Open Social Dashboard' to launch Zoho Social\n" +
+                        "3. Sign in with your Zoho account\n" +
+                        "4. Connect your social media accounts\n\n" +
                         "**Free Features:**\n" +
-                        "✅ Unlimited remote sessions\n" +
-                        "✅ Screen sharing & remote control\n" +
-                        "✅ Cross-platform support\n" +
-                        "✅ Secure encrypted connections\n" +
-                        "✅ File transfer capabilities\n" +
-                        "✅ Voice & video chat\n\n" +
-                        "**Security:** All connections use enterprise-grade encryption 🔒",
+                        "✅ 1 brand with 7 social channels\n" +
+                        "✅ Schedule unlimited posts\n" +
+                        "✅ Basic analytics and reports\n" +
+                        "✅ Social media monitoring\n" +
+                        "✅ Team collaboration (3 members)\n" +
+                        "✅ Publishing calendar view\n\n" +
+                        "**Supported Platforms:** Facebook, Twitter, LinkedIn, Instagram, Google My Business 📊",
+                );
+            }
+
+            // Zoho Webinar Integration Functions
+            function toggleWebinarWidget() {
+                console.log("🎥 Toggling Zoho Webinar widget...");
+                const widget = document.getElementById("webinarWidget");
+
+                if (widget.style.display === "none") {
+                    // Show widget
+                    widget.style.display = "block";
+
+                    addMessage(
+                        "system",
+                        "🎥 **Zoho Webinar Console**\n\n" +
+                            "Click 'Open Webinar Console' to access your webinar management dashboard.\n\n" +
+                            "**What you can do:**\n" +
+                            "• Create and schedule webinars\n" +
+                            "• Manage registrations and attendees\n" +
+                            "• Host live webinar sessions\n" +
+                            "• View detailed analytics and reports\n" +
+                            "• Send automated email invitations\n" +
+                            "• Record sessions for later viewing\n\n" +
+                            "**Setup Required:**\n" +
+                            "1. Create free account at https://webinar.zoho.com\n" +
+                            "2. Set up your first webinar\n" +
+                            "3. Configure registration settings\n\n" +
+                            "Professional webinar hosting made simple! 🚀",
+                    );
+                } else {
+                    // Hide widget
+                    widget.style.display = "none";
+                    addMessage("system", "🎥 Webinar widget hidden.");
+                }
+            }
+
+            function openZohoWebinarWindow() {
+                console.log("🎥 Opening Zoho Webinar in new window...");
+                const webinarUrl = "https://webinar.zoho.com";
+                const newWindow = window.open(
+                    webinarUrl,
+                    "_blank",
+                    "width=1200,height=800,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=yes",
+                );
+
+                if (newWindow) {
+                    addMessage(
+                        "system",
+                        "🎥 **Zoho Webinar Opened Successfully**\n\n" +
+                            "Your webinar console has opened. You can now:\n\n" +
+                            "1. **Create webinars** - Set up new webinar sessions\n" +
+                            "2. **Manage events** - Edit existing webinars and settings\n" +
+                            "3. **Track registrations** - Monitor attendee signups\n" +
+                            "4. **Host sessions** - Go live with your webinars\n" +
+                            "5. **View analytics** - Analyze attendance and engagement\n\n" +
+                            "Start hosting professional webinars today! 🎯",
+                    );
+                } else {
+                    addMessage(
+                        "system",
+                        "❌ **Pop-up Blocked**\n\n" +
+                            "Your browser blocked the pop-up window. Please:\n\n" +
+                            "1. Allow pop-ups for this site\n" +
+                            "2. Or manually visit: https://webinar.zoho.com\n" +
+                            "3. Sign in with your Zoho account\n\n" +
+                            "This opens your webinar management console.",
+                    );
+                }
+            }
+
+            function showWebinarInfo() {
+                addMessage(
+                    "system",
+                    "🎥 **Zoho Webinar - Setup Guide**\n\n" +
+                        "**How to get started:**\n" +
+                        "1. Click 'Webinars' to see the widget\n" +
+                        "2. Click 'Open Webinar Console' to launch Zoho Webinar\n" +
+                        "3. Sign in with your Zoho account\n" +
+                        "4. Create your first webinar\n\n" +
+                        "**Free Features:**\n" +
+                        "✅ Up to 3 webinars per month\n" +
+                        "✅ Up to 25 attendees per webinar\n" +
+                        "✅ HD video and audio quality\n" +
+                        "✅ Screen sharing and presentation tools\n" +
+                        "✅ Registration management\n" +
+                        "✅ Email invitations and reminders\n" +
+                        "✅ Basic analytics and reports\n" +
+                        "✅ Mobile app for hosting\n\n" +
+                        "**Perfect for:** Training sessions, product demos, team meetings, educational content 📊",
                 );
             }
 
